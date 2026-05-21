@@ -2,13 +2,9 @@
   import type { PageData } from './$types';
   let { data }: { data: PageData } = $props();
   const c = $derived(data.council);
-  const jobs = $derived(data.jobs);
   const notes = $derived(data.notes);
-  const running = $derived(new Set(data.running.map((r) => r.councillor)));
-
-  function statusClass(status: string): string {
-    return `status status-${status}`;
-  }
+  const running = $derived(new Set(data.running));
+  const recent = $derived(data.recentByCouncillor);
 </script>
 
 <p><a href="/">&larr; Councils</a></p>
@@ -30,56 +26,51 @@
   </div>
 </header>
 
-<section class="councillors">
+<section>
   <div class="section-head">
     <h2>Councillors</h2>
-    <a class="btn primary" href="/councils/{c.slug}/councillors/new">+ New councillor</a>
+    <div class="head-actions">
+      <a class="btn" href="/councils/{c.slug}/jobs/new">+ New job</a>
+      <a class="btn primary" href="/councils/{c.slug}/councillors/new">+ New councillor</a>
+    </div>
   </div>
 
   {#if c.councillors.length === 0}
     <p class="empty">No councillors yet.</p>
   {:else}
-    <ul class="list">
+    <div class="columns">
       {#each c.councillors as cl (cl.slug)}
-        <li>
-          <a class="card" href="/councils/{c.slug}/councillors/{cl.slug}">
-            <div class="card-title">
+        {@const jobs = recent[cl.slug] ?? []}
+        <div class="column">
+          <div class="col-head">
+            <a class="col-title" href="/councils/{c.slug}/councillors/{cl.slug}">
               {cl.name}
               {#if running.has(cl.slug)}<span class="dot running" title="Running a job">●</span>{/if}
+            </a>
+            <div class="col-sub">
+              {cl.role || 'no role'}{#if cl.adapter} · <code>{cl.adapter}</code>{/if}
             </div>
-            <div class="card-desc">
-              {cl.role}{#if cl.adapter} · <code>{cl.adapter}</code>{/if}
-            </div>
-          </a>
-        </li>
+          </div>
+          {#if jobs.length === 0}
+            <p class="col-empty">No jobs yet.</p>
+          {:else}
+            <ul class="job-list">
+              {#each jobs as j (j.id)}
+                <li>
+                  <a class="job-card" href="/councils/{c.slug}/jobs/{j.id}">
+                    <div class="job-title">
+                      <span class="job-name">{j.title}</span>
+                      <span class="status status-{j.status}">{j.status}</span>
+                    </div>
+                    <div class="job-meta">{new Date(j.created_at).toLocaleString()}</div>
+                  </a>
+                </li>
+              {/each}
+            </ul>
+          {/if}
+        </div>
       {/each}
-    </ul>
-  {/if}
-</section>
-
-<section class="panel">
-  <div class="section-head">
-    <h2>Activity</h2>
-    <a class="btn primary" href="/councils/{c.slug}/jobs/new">+ New job</a>
-  </div>
-  {#if jobs.length === 0}
-    <p class="empty">No jobs yet.</p>
-  {:else}
-    <ul class="list">
-      {#each jobs.slice(0, 10) as j (j.id)}
-        <li>
-          <a class="card" href="/councils/{c.slug}/jobs/{j.id}">
-            <div class="card-title">
-              {j.title}
-              <span class={statusClass(j.status)}>{j.status}</span>
-            </div>
-            <div class="card-desc">
-              {j.councillor_slug} · {new Date(j.created_at).toLocaleString()}
-            </div>
-          </a>
-        </li>
-      {/each}
-    </ul>
+    </div>
   {/if}
 </section>
 
@@ -114,15 +105,50 @@
   h2 { margin: 0 0 1rem; }
   .panel { margin-top: 2.5rem; }
   .empty { color: var(--muted); padding: 1rem 0; }
+
+  .columns {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+    gap: 1rem;
+    align-items: start;
+  }
+  .column {
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 1rem;
+    background: rgba(255, 255, 255, 0.01);
+  }
+  .col-head { margin-bottom: 0.85rem; }
+  .col-title {
+    display: inline-flex; align-items: center; gap: 0.5rem;
+    font-weight: 600; font-size: 1.05em;
+    color: var(--fg); text-decoration: none;
+  }
+  .col-title:hover { color: var(--accent); }
+  .col-sub { color: var(--muted); font-size: 0.85em; margin-top: 0.25rem; }
+  .col-empty { color: var(--muted); font-size: 0.9em; margin: 0; padding: 0.5rem 0 0; }
+
+  .job-list { list-style: none; padding: 0; margin: 0; display: grid; gap: 0.5rem; }
+  .job-card {
+    display: block; border: 1px solid var(--border); border-radius: 6px;
+    padding: 0.55rem 0.7rem; text-decoration: none; color: var(--fg);
+    background: rgba(255, 255, 255, 0.015);
+  }
+  .job-card:hover { border-color: var(--accent); }
+  .job-title { display: flex; justify-content: space-between; gap: 0.5rem; align-items: center; font-size: 0.9em; }
+  .job-name { font-weight: 500; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; }
+  .job-meta { color: var(--muted); font-size: 0.75em; margin-top: 0.2rem; }
+
   .list { list-style: none; padding: 0; display: grid; gap: 0.75rem; }
   .card { display: block; border: 1px solid var(--border); border-radius: 8px; padding: 1rem 1.1rem; text-decoration: none; color: var(--fg); }
   .card:hover { border-color: var(--accent); }
-  .card-title { font-weight: 600; display: flex; gap: 0.5rem; align-items: center; }
+  .card-title { font-weight: 600; }
   .card-desc { color: var(--muted); margin-top: 0.25rem; font-size: 0.95em; }
+
   .btn { display: inline-block; padding: 0.5rem 0.9rem; border-radius: 6px; border: 1px solid var(--border); text-decoration: none; color: var(--fg); background: transparent; cursor: pointer; }
   .btn.primary { background: var(--accent); color: #0f1115; border-color: var(--accent); font-weight: 600; }
   .btn.danger { border-color: var(--danger); color: var(--danger); }
-  .status { font-size: 0.75em; padding: 0.15rem 0.5rem; border-radius: 999px; border: 1px solid var(--border); color: var(--muted); font-weight: 500; }
+  .status { flex-shrink: 0; font-size: 0.7em; padding: 0.05rem 0.4rem; border-radius: 999px; border: 1px solid var(--border); color: var(--muted); font-weight: 500; }
   .status-running { color: var(--accent); border-color: var(--accent); }
   .status-succeeded { color: #8bb98b; border-color: #4f6b4f; }
   .status-failed { color: var(--danger); border-color: var(--danger); }
