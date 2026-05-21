@@ -142,6 +142,15 @@ export async function setStatus(
   return next;
 }
 
+export async function rerunJob(councilSlug: string, sourceId: string, now: Date = new Date()): Promise<Job> {
+  const source = await readJob(councilSlug, sourceId);
+  return createJob(
+    councilSlug,
+    { title: source.title, brief: source.brief, councillor_slug: source.councillor_slug },
+    now
+  );
+}
+
 export async function currentJobForCouncillor(councilSlug: string, councillorSlug: string): Promise<Job | null> {
   const jobs = await listJobsForCouncillor(councilSlug, councillorSlug);
   return jobs.find((j) => j.status === 'running' || j.status === 'queued') ?? null;

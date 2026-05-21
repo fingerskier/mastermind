@@ -13,6 +13,7 @@ import {
   listJobsForCouncillor,
   readEvents,
   readJob,
+  rerunJob,
   setStatus,
   writeInput,
   writeOutput
@@ -92,6 +93,34 @@ describe('jobs', () => {
     expect((await currentJobForCouncillor('test-council', 'cfo'))?.id).toBe(j.id);
     await setStatus('test-council', j.id, 'succeeded');
     expect(await currentJobForCouncillor('test-council', 'cfo')).toBe(null);
+  });
+
+  it('rerunJob clones a finished job into a new queued job, leaving the original intact', async () => {
+    const source = await createJob(
+      'test-council',
+      { title: 'Forecast', brief: 'do the thing', councillor_slug: 'cfo' },
+      new Date('2026-05-21T10:00:00Z')
+    );
+    await setStatus('test-council', source.id, 'failed', {
+      finished_at: new Date().toISOString(),
+      error: 'boom'
+    });
+
+    const clone = await rerunJob('test-council', source.id, new Date('2026-05-21T10:05:00Z'));
+
+    expect(clone.id).not.toBe(source.id);
+    expect(clone.status).toBe('queued');
+    expect(clone.title).toBe(source.title);
+    expect(clone.brief).toBe(source.brief);
+    expect(clone.councillor_slug).toBe(source.councillor_slug);
+    expect(clone.error).toBeNull();
+
+    const original = await readJob('test-council', source.id);
+    expect(original.status).toBe('failed');
+    expect(original.error).toBe('boom');
+
+    const cloneEvents = await readEvents('test-council', clone.id);
+    expect(cloneEvents.map((e) => e.type)).toEqual(['created']);
   });
 
   it('rejects creating a job in a non-existent council', async () => {

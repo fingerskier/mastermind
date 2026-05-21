@@ -41,6 +41,9 @@
     {#if job.status === 'running'}
       <form method="POST" action="?/cancel"><button class="btn danger" type="submit">Cancel</button></form>
     {/if}
+    {#if job.status === 'succeeded' || job.status === 'failed' || job.status === 'cancelled'}
+      <form method="POST" action="?/rerun"><button class="btn primary" type="submit">Re-run</button></form>
+    {/if}
   </div>
 </header>
 
