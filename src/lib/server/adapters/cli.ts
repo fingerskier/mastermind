@@ -18,7 +18,7 @@ const REGISTRY: Record<string, CliAdapterConfig> = {
   'cli:codex': {
     id: 'cli:codex',
     command: 'codex',
-    args: () => ['exec', '-'],
+    args: () => ['exec', '--skip-git-repo-check', '-'],
     stdinMode: 'pipe'
   }
 };
