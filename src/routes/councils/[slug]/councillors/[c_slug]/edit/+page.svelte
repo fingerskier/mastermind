@@ -3,7 +3,10 @@
   import type { ActionData, PageData } from './$types';
   let { data, form }: { data: PageData; form: ActionData } = $props();
   const c = $derived(data.councillor);
+  const adapters = $derived(data.adapters);
   const councilSlug = $derived(page.params.slug);
+  const initialAdapter = $derived(form?.adapter ?? c.adapter ?? '');
+  const isKnown = $derived(initialAdapter === '' || adapters.some((a) => a.id === initialAdapter));
 </script>
 
 <p><a href="/councils/{councilSlug}/councillors/{c.slug}">&larr; {c.name}</a></p>
@@ -24,7 +27,17 @@
 
   <label>
     <span>Adapter <em>(optional)</em></span>
-    <input name="adapter" maxlength="80" value={form?.adapter ?? c.adapter} placeholder="cli:claude · sdk:anthropic · ..." />
+    <select name="adapter">
+      <option value="" selected={initialAdapter === ''}>— none (set later) —</option>
+      {#if !isKnown}
+        <option value={initialAdapter} selected>{initialAdapter} (custom)</option>
+      {/if}
+      {#each adapters as a (a.id)}
+        <option value={a.id} selected={a.id === initialAdapter} disabled={!a.available}>
+          {a.label}{a.available ? '' : ' — unavailable'}
+        </option>
+      {/each}
+    </select>
   </label>
 
   <label>
@@ -42,9 +55,9 @@
   .form { display: grid; gap: 1rem; max-width: 640px; }
   label { display: grid; gap: 0.35rem; }
   label > span { color: var(--muted); font-size: 0.9em; }
-  input, textarea { background: #1a1d24; color: var(--fg); border: 1px solid var(--border); border-radius: 6px; padding: 0.55rem 0.7rem; font-family: inherit; }
+  input, textarea, select { background: #1a1d24; color: var(--fg); border: 1px solid var(--border); border-radius: 6px; padding: 0.55rem 0.7rem; font-family: inherit; }
   textarea { font-family: ui-monospace, "Cascadia Mono", Consolas, monospace; }
-  input:focus, textarea:focus { outline: 2px solid var(--accent); border-color: var(--accent); }
+  input:focus, textarea:focus, select:focus { outline: 2px solid var(--accent); border-color: var(--accent); }
   .actions { display: flex; gap: 0.5rem; }
   .btn { display: inline-block; padding: 0.5rem 0.9rem; border-radius: 6px; border: 1px solid var(--border); text-decoration: none; color: var(--fg); background: transparent; cursor: pointer; }
   .btn.primary { background: var(--accent); color: #0f1115; border-color: var(--accent); font-weight: 600; }

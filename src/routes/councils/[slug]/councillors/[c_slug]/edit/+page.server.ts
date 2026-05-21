@@ -1,11 +1,12 @@
 import { error, fail, redirect } from '@sveltejs/kit';
 import { readCouncillor, updateCouncillor } from '$lib/server/councillors';
+import { listKnownAdapters } from '$lib/server/adapters';
 import type { Actions, PageServerLoad } from './$types';
 
 export const load: PageServerLoad = async ({ params }) => {
   try {
     const councillor = await readCouncillor(params.slug, params.c_slug);
-    return { councillor };
+    return { councillor, adapters: listKnownAdapters() };
   } catch {
     error(404, 'Councillor not found');
   }

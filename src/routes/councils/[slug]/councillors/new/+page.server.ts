@@ -1,6 +1,11 @@
 import { fail, redirect } from '@sveltejs/kit';
 import { createCouncillor } from '$lib/server/councillors';
-import type { Actions } from './$types';
+import { listKnownAdapters } from '$lib/server/adapters';
+import type { Actions, PageServerLoad } from './$types';
+
+export const load: PageServerLoad = async () => {
+  return { adapters: listKnownAdapters() };
+};
 
 export const actions: Actions = {
   default: async ({ request, params }) => {
