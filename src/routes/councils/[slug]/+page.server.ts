@@ -1,11 +1,21 @@
 import { error, fail, redirect } from '@sveltejs/kit';
 import { deleteCouncil, readCouncilWithCouncillors } from '$lib/server/councils';
+import { listJobs } from '$lib/server/jobs';
+import { listNotes } from '$lib/server/memory';
+import { currentRuns } from '$lib/server/runner';
 import type { Actions, PageServerLoad } from './$types';
 
 export const load: PageServerLoad = async ({ params }) => {
   try {
     const council = await readCouncilWithCouncillors(params.slug);
-    return { council };
+    const [jobs, notes] = await Promise.all([
+      listJobs(params.slug),
+      listNotes(params.slug)
+    ]);
+    const running = currentRuns()
+      .filter((r) => r.council === params.slug)
+      .map((r) => ({ councillor: r.councillor, jobId: r.jobId }));
+    return { council, jobs, notes, running };
   } catch {
     error(404, 'Council not found');
   }

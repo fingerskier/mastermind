@@ -145,3 +145,6 @@ vite.config.ts.timestamp-*
 
 # Local Landsraad dogfood council
 .dogfood-council/
+
+# Playwright MCP scratch
+.playwright-mcp/

@@ -1,20 +1,19 @@
 # Landsraad — Specification
 
-Status: v0 (first pass after restart). High-level only. Implementation details live in `docs/` and in code.
+Status: v1 (council + councillor + jobs + memory + adapters + activity dashboard). High-level only. Implementation details live in `docs/` and in code.
 
 ## What it is
 
-Landsraad is a local-first, single-directory **council chamber** for AI agents. A council is a group of agents working with a human director (you). The app is an `npx`-launchable Node.js + TypeScript application (SvelteKit) that lets the director create councils, configure councillors, and — eventually — invoke each councillor through a CLI or SDK adapter.
+Landsraad is a local-first, single-directory **council chamber** for AI agents. A council is a group of agents working with a human director (you). The app is an `npx`-launchable Node.js + TypeScript application (SvelteKit) that lets the director create councils, configure councillors, **assign jobs to them, keep shared memory, and watch the council work**.
 
-This v0 spec covers only the **council and councillor management surface**. Agent invocation, jobs, projects, memory, scheduling, and retrieval are deliberately out of scope here; they will be designed in follow-up specs once the management surface is solid.
+## Non-goals (still)
 
-## Non-goals (for v0)
-
-- No agent execution / job runner / scheduler.
-- No shared memory or retrieval index.
-- No "Secretary" singleton agent. The director **is** the secretary — Landsraad is a tool the director drives, not an autonomous front-desk.
+- No "Secretary" singleton agent. The director **is** the secretary.
 - No multi-user, no auth, no remote hosting. One operator, one machine.
-- No provider-specific SDK code yet. Adapters are a future concept.
+- No provider-native SDK code yet. v1 invokes adapters as **subprocesses** (CLI tools). SDK adapters land in a future spec.
+- No retrieval index, no embeddings. Memory is plain markdown files. (A retrieval pass will land separately if it proves needed.)
+- No cron / recurring jobs. v1 jobs are one-shot.
+- No remote provider permission/auth orchestration. If a CLI needs login, the user logs in once outside Landsraad.
 
 ## Target Users
 
@@ -34,101 +33,131 @@ A user comfortable editing markdown, JSON, and CSV files who wants a transparent
 
 ### Director
 
-The human user. The director creates councils, configures councillors, reviews outputs, provides feedback, approves risky actions, and handles real-world execution. The director also performs all coordination work — there is no secretary agent in v0.
+The human user. The director creates councils, configures councillors, writes jobs, reviews outputs, edits shared memory, and handles real-world execution. The director also performs all coordination work — there is no secretary agent.
 
 ### Council
 
-A configured group of councillors plus the per-council state that supports them. Each council lives in its own directory on disk; the director can have many councils.
-
-### Council Template
-
-A reusable, shareable definition of a council type — agent roles, personas, default adapter expectations, and starter scaffolding. Templates must never contain user private data, operational history, business-specific facts, secrets, customer information, financial data, or other PII. (Templates are forward-looking; v0 ships a couple of built-in starters.)
+A configured group of councillors plus the per-council state that supports them: jobs, shared memory, run artifacts. Each council lives in its own directory on disk; the director can have many councils.
 
 ### Councillor
 
-A named council member with a role, persona, and (eventually) a platform adapter and model/tool configuration. Councillors own domain work in their area of responsibility.
+A named council member with a role, persona (markdown), and an **adapter** that says how to actually invoke them. Councillors own domain work in their area of responsibility.
 
-Example councillors:
+### Adapter
 
-- CFO
-- CTO
-- CMO
-- Macro Strategist
-- Quant Researcher
-- Risk Manager
-- Literature Reviewer
-- Product Strategist
+The bridge between a councillor and an actual model invocation. v1 supports two adapter kinds, identified by the councillor's `adapter` string:
 
-### Agent adapter (forward-looking)
+| Adapter string | What it does |
+|---|---|
+| `mock:local` | Deterministic in-process stub. Echoes a structured response. Used for tests + offline demos + dogfooding without a real CLI installed. |
+| `cli:claude` | Spawns `claude -p <prompt>` as a subprocess, captures stdout. |
+| `cli:codex` | Spawns `codex exec <prompt>` as a subprocess, captures stdout. |
+| *(empty)* | The councillor cannot be run. Jobs assigned to them stay queued until the adapter is set. |
 
-The bridge between a councillor's persona and an actual model invocation. In v0 there is no execution; the adapter slot on a councillor is configuration-only and will later be wired to either:
+CLI adapters inherit the user's environment (so auth set up outside Landsraad just works). They run with `cwd` set to the council directory so the CLI can read memory files relative to a known root.
 
-- a **CLI wrapper** (e.g. `claude`, `codex`, `gemini` invoked as a subprocess), or
-- an **SDK wrapper** (direct API calls via the relevant provider SDK).
+A future SDK adapter family (`sdk:anthropic`, `sdk:openai`) will use the same `Adapter` interface and slot in without breaking the job runner.
 
-The spec for adapters is deferred. v0 only stores the intended adapter name as free-form metadata.
+### Job
 
-## v0 Functionality
+A unit of work the director gives to one councillor. A job has a brief (free-form markdown prompt from the director), an assigned councillor, and a status:
 
-The first pass ships exactly this:
+- `queued` — created, not yet running.
+- `running` — adapter has been invoked.
+- `succeeded` — adapter completed normally.
+- `failed` — adapter exited non-zero or threw.
+- `cancelled` — director cancelled before/during the run.
 
-1. **Launch the app.** From any directory: `npx landsraad` (eventually). For dev: `npm run dev` from the repo. The app opens a local web UI at `http://127.0.0.1:5173` (dev) or a chosen port in production.
-2. **List councils.** Home page lists every council the director has created, with a "New council" action.
-3. **Create a council.** Form: name, short description, optional template choice. On submit, a council directory is created on disk under a configured root.
-4. **Open a council.** Council page shows: name, description, list of councillors, and actions to add/edit/remove councillors.
-5. **Create a councillor.** Form: name, role (free text), persona (markdown), intended adapter (free text — `cli:claude`, `sdk:anthropic`, etc.).
-6. **Edit a councillor.** Same form, pre-filled.
-7. **Remove a councillor.** Confirm + delete.
-8. **Delete a council.** Confirm + delete the entire council directory.
+Jobs are one-shot. To repeat a job, the director clones it. Jobs are scoped to one council.
 
-That is the entire v0 surface. No execution, no scheduling, no memory.
+### Memory
+
+`<council>/memory/*.md` — shared markdown notes. Every job invocation passes the council's memory to the adapter as part of the prompt context. The director (and, later, councillors themselves) can create, edit, and delete memory notes. There is no embedding/retrieval layer in v1; the whole memory directory is included on every run. Keep it small.
+
+### Council Template
+
+A reusable, shareable definition of a council type — councillor roles, personas, default adapter expectations, and starter scaffolding. Templates must never contain user private data, operational history, business-specific facts, secrets, customer information, financial data, or other PII. v1 ships one built-in template: **Dogfood** (see below).
+
+### Dogfood Council
+
+A built-in council for testing Landsraad itself. The CLI command `npm run dogfood:init` (and the equivalent `landsraad dogfood-init` once installed) seeds `~/.landsraad/councils/dogfood` with two `mock:local` councillors, one shared memory note, and one sample job. This is the council the director uses to exercise the app without burning real-CLI tokens.
+
+## v1 Functionality
+
+1. **Launch the app.** `npm run dev` from the repo (eventually `npx landsraad`).
+2. **Manage councils.** Create, view, edit, delete. List on `/`.
+3. **Manage councillors.** Inside a council. Same CRUD, plus the adapter string.
+4. **Manage shared memory.** Inside a council. CRUD on `*.md` notes.
+5. **Create and run jobs.** Inside a council: pick a councillor, write a brief, submit. The runner picks up queued jobs and invokes the councillor's adapter. Status updates land on disk; the UI polls for live updates while a job is running.
+6. **Activity view.** The council page shows each councillor's current job (or "idle"), plus a list of recent jobs with status badges and timestamps.
+7. **Per-job artifacts.** Each run leaves `input.md` (the assembled prompt), `transcript.md` (raw adapter output), `output.md` (final response or summary), `events.jsonl` (state transitions), and `job.json` (metadata).
+8. **Seed a dogfood council.** `npm run dogfood:init`.
 
 ## Storage Model
-
-All state lives on the filesystem. The director chooses a councils root (default: `~/.landsraad/councils/`); each council is a subdirectory.
 
 ```
 <councils-root>/
   <council-slug>/
-    council.json                    # name, description, template, created_at
+    council.json
     councillors/
       <councillor-slug>/
-        councillor.json             # name, role, adapter, created_at
-        persona.md                  # markdown persona
+        councillor.json          # name, role, adapter, created_at
+        persona.md
+    memory/
+      <note-slug>.md             # shared notes
+    jobs/
+      <job-id>/                  # job-id is timestamped + slugged
+        job.json                 # id, title, brief_path, councillor_slug, status, *_at fields, exit_code?
+        input.md                 # assembled prompt sent to the adapter
+        transcript.md            # raw stdout (and stderr) from the adapter
+        output.md                # final response (often === transcript.md, possibly trimmed)
+        events.jsonl             # one line per state transition or progress event
 ```
 
-JSON files are the source of truth for structured fields; markdown files are the source of truth for prose. Filenames are slug-derived from display names.
+Job IDs are `<UTC-timestamp>-<title-slug>` (e.g. `2026-05-21T14-30-00Z-q1-summary`) — sortable, human-readable, unique enough for one-director scale.
 
-The app never writes secrets to disk. It also never writes outside `<councils-root>`.
+The app never writes outside `<councils-root>`. It never writes secrets to disk. Subprocess environment is inherited unchanged.
 
-## UI Surfaces (v0)
+## Runner semantics (v1)
+
+- One in-process scheduler inside the SvelteKit server. No separate worker process.
+- At most one running job per councillor. Multiple councillors in the same council can run in parallel.
+- Newly created jobs trigger a pickup tick. Crashed/orphaned `running` jobs at server start are not auto-resumed; they are flipped to `failed` with a note (no resume in v1).
+- The runner spawns the adapter with `cwd` = the council directory and `env` = the SvelteKit server's env. stdout/stderr stream into `transcript.md`. On exit, the runner writes `output.md`, sets status, appends a final event.
+- Cancellation: form action sends SIGTERM. After a short grace window, SIGKILL.
+
+## UI Surfaces (v1)
 
 | Route | Purpose |
 |---|---|
-| `/` | Council list + "New council" |
-| `/councils/new` | Create council form |
-| `/councils/[slug]` | Council detail: metadata + councillor list |
-| `/councils/[slug]/edit` | Edit council metadata |
+| `/` | Council list |
+| `/councils/new` | Create council |
+| `/councils/[slug]` | Council home: metadata · councillors · activity · jobs · memory |
+| `/councils/[slug]/edit` | Edit council |
 | `/councils/[slug]/councillors/new` | Add councillor |
-| `/councils/[slug]/councillors/[c-slug]` | View councillor |
+| `/councils/[slug]/councillors/[c-slug]` | View councillor + their jobs |
 | `/councils/[slug]/councillors/[c-slug]/edit` | Edit councillor |
+| `/councils/[slug]/memory/new` | Add memory note |
+| `/councils/[slug]/memory/[note]` | View / edit memory note |
+| `/councils/[slug]/jobs/new` | Create job |
+| `/councils/[slug]/jobs/[jid]` | Job detail: brief, transcript, output, status. Auto-refreshes while `running`. |
 
-No global navigation beyond a header link back to `/`.
+A persistent header links back to `/`; the council page is the working surface.
 
 ## Out of Scope (will be specified later)
 
-- Agent adapters (CLI + SDK wrappers)
-- Jobs, runs, transcripts
-- Projects
-- Shared memory + retrieval index
-- Scheduler
-- Permissions / audit log
-- Templates marketplace, multi-user, auth
+- SDK adapters (`sdk:anthropic`, `sdk:openai`, …)
+- Cron / recurring jobs / scheduler
+- Projects (a layer above jobs that group related work)
+- Per-councillor private memory
+- Retrieval index over memory
+- Permissions / audit log for risky tool use
+- Templates marketplace, multi-user, auth, remote hosting
 
 ## Open Questions
 
-- Where should councils default to? (`~/.landsraad/councils/` vs. a per-cwd `.landsraad/`)
-- Should councillor personas be markdown only, or also support structured fields (style, tone, constraints) up front?
-- How should the eventual adapter contract look — one process per invocation, or a long-running adapter daemon?
+- Should memory inclusion be opt-in per job (a checkbox at submit) rather than always-on? Cheap to flip later.
+- How big is too big for memory before we need retrieval? Probably the first time a memory directory exceeds the adapter's context budget.
+- How should we surface CLI auth failures (e.g., `claude` returns "not logged in") so the director knows what to fix?
 
-These are flagged here so they aren't lost; v0 ships with defaults and we revisit when adapters land.
+These are flagged here so they aren't lost.

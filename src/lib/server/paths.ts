@@ -15,6 +15,18 @@ export function councillorDir(councilSlug: string, councillorSlug: string): stri
   return join(councilDir(councilSlug), 'councillors', councillorSlug);
 }
 
+export function memoryDir(councilSlug: string): string {
+  return join(councilDir(councilSlug), 'memory');
+}
+
+export function jobsDir(councilSlug: string): string {
+  return join(councilDir(councilSlug), 'jobs');
+}
+
+export function jobDir(councilSlug: string, jobId: string): string {
+  return join(jobsDir(councilSlug), jobId);
+}
+
 export function slugify(input: string): string {
   const slug = input
     .toLowerCase()
@@ -24,4 +36,10 @@ export function slugify(input: string): string {
     .slice(0, 64);
   if (!slug) throw new Error('Name must contain at least one alphanumeric character.');
   return slug;
+}
+
+export function jobIdFor(title: string, now: Date = new Date()): string {
+  const ts = now.toISOString().replace(/[:.]/g, '-').replace(/-\d{3}Z$/, 'Z');
+  const titleSlug = slugify(title);
+  return `${ts}-${titleSlug}`;
 }
