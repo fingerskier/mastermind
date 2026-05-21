@@ -13,6 +13,7 @@ import {
   listJobsForCouncillor,
   readEvents,
   readJob,
+  readOutputSlug,
   rerunJob,
   setStatus,
   writeInput,
@@ -121,6 +122,21 @@ describe('jobs', () => {
 
     const cloneEvents = await readEvents('test-council', clone.id);
     expect(cloneEvents.map((e) => e.type)).toEqual(['created']);
+  });
+
+  it('readOutputSlug returns the first non-empty line, truncated', async () => {
+    const j = await createJob('test-council', { title: 't', brief: 'b', councillor_slug: 'x' });
+
+    expect(await readOutputSlug('test-council', j.id)).toBe('');
+
+    await writeOutput('test-council', j.id, '\n\n   The answer is 42.\nfollow-up line\n');
+    expect(await readOutputSlug('test-council', j.id)).toBe('The answer is 42.');
+
+    const long = 'x'.repeat(200);
+    await writeOutput('test-council', j.id, long);
+    const slug = await readOutputSlug('test-council', j.id, 80);
+    expect(slug.length).toBeLessThanOrEqual(81);
+    expect(slug.endsWith('…')).toBe(true);
   });
 
   it('rejects creating a job in a non-existent council', async () => {

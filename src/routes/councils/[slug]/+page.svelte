@@ -62,6 +62,9 @@
                       <span class="job-name">{j.title}</span>
                       <span class="status status-{j.status}">{j.status}</span>
                     </div>
+                    {#if j.status === 'succeeded' && j.slug}
+                      <div class="job-slug">{j.slug}</div>
+                    {/if}
                     <div class="job-meta">{new Date(j.created_at).toLocaleString()}</div>
                   </a>
                 </li>
@@ -139,6 +142,12 @@
   .job-card:hover { border-color: var(--accent); }
   .job-title { display: flex; justify-content: space-between; gap: 0.5rem; align-items: center; font-size: 0.9em; }
   .job-name { font-weight: 500; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; }
+  .job-slug {
+    color: var(--fg); font-size: 0.8em; margin-top: 0.25rem;
+    opacity: 0.85;
+    display: -webkit-box; -webkit-line-clamp: 2; line-clamp: 2; -webkit-box-orient: vertical;
+    overflow: hidden; text-overflow: ellipsis; word-break: break-word;
+  }
   .job-meta { color: var(--muted); font-size: 0.75em; margin-top: 0.2rem; }
 
   .list { list-style: none; padding: 0; display: grid; gap: 0.75rem; }

@@ -117,6 +117,12 @@ export async function readOutput(councilSlug: string, jobId: string): Promise<st
   return existsSync(file) ? await readFile(file, 'utf8') : '';
 }
 
+export async function readOutputSlug(councilSlug: string, jobId: string, max = 120): Promise<string> {
+  const raw = await readOutput(councilSlug, jobId);
+  const line = raw.split('\n').map((l) => l.trim()).find((l) => l.length > 0) ?? '';
+  return line.length > max ? line.slice(0, max) + '…' : line;
+}
+
 const STATUS_EVENT: Record<JobStatus, JobEvent['type']> = {
   queued: 'note',
   running: 'started',
