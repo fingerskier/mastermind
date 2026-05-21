@@ -1,40 +1,36 @@
 # AGENTS.md
 
-This file applies to the whole repository.
+Notes for AI agents (and humans) working on this codebase.
 
-## Development Loop
+## Repo layout
 
-Use this process for product and implementation work:
+- `SPECIFICATION.md` — what the product is supposed to be. Read this first.
+- `README.md` — how to run it.
+- `docs/` — architecture, data model, future surfaces.
+- `src/` — SvelteKit app.
+- `bin/landsraad.js` — `npx landsraad` entrypoint (runs `build/index.js`).
 
-1. Check or update the specification.
-   - Start with `SPECIFICATION.md`.
-   - If the change touches a durable contract, add or update the relevant focused doc under `specification/`.
-   - Keep implementation aligned with the documented product behavior.
+## Development loop
 
-2. TDD implement.
-   - Add or update a failing test before or alongside the implementation.
-   - Keep tests scoped to the behavior being changed.
-   - Prefer existing test style, helpers, and project structure.
+1. **Update the spec first** if the task changes product behavior. `SPECIFICATION.md` is the source of truth.
+2. **Red/green TDD.** Tests live next to code (`*.test.ts`). Run with `npm test`.
+3. **Smoke test the UI** with `npm run dev` for anything user-facing. Type-check with `npm run check`.
+4. **Update docs** (`README.md`, `docs/`) when behavior or layout changes.
 
-3. Run an actual product evaluation.
-   - For CLI behavior, run the real CLI command path, not only unit tests.
-   - For UI behavior, run a Playwright evaluation against the local app.
-   - Record the relevant command, URL, or eval path in the final handoff.
+## Constraints
 
-4. Update documentation.
-   - Add or update relevant documentation in `README.md` or other docs.
-   - Ensure the documentation reflects the implemented behavior and any new features.
+- Node 20+, ES modules, TypeScript strict.
+- All persistence goes through `src/lib/server/`. Routes never touch `node:fs` directly.
+- `$lib/server/**` never gets shipped to the browser — keep secrets and filesystem code there.
+- The app must not write outside `LANDSRAAD_COUNCILS_ROOT` (default `~/.landsraad/councils`).
+- No secrets in tracked files. No telemetry.
 
-## Dogfood Council
+## Out of scope (for now)
 
-Use `.dogfood-council/` for local product-development dogfooding.
+Agent execution, jobs, runs, scheduler, memory, retrieval, adapters. Do not add them as scope creep — they need their own spec pass.
 
-- The directory is intentionally ignored by Git.
-- Treat it as disposable runtime state for exercising Landsraad workflows.
-- Do not put secrets, customer data, or private operational data in tracked files.
-- When the CLI can initialize councils, prefer regenerating this directory through the real CLI instead of hand-maintaining it.
-- Dogfood results are useful evidence, but they do not replace automated tests.
+## Git
 
-## Git Usage
-- It is okay for you to commit directly to main
-- Use branches and/or worktrees for large or experimental features
+- It is okay to commit directly to `main`.
+- Use branches/worktrees for larger or experimental features.
+- Don't push unless the user explicitly says to.
