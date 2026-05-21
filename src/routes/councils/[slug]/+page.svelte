@@ -38,7 +38,7 @@
   {#if c.councillors.length === 0}
     <p class="empty">No councillors yet.</p>
   {:else}
-    <div class="columns">
+    <div class="columns" style="--col-count: {c.councillors.length}">
       {#each c.councillors as cl (cl.slug)}
         {@const jobs = recent[cl.slug] ?? []}
         <div class="column">
@@ -108,9 +108,11 @@
 
   .columns {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+    grid-template-columns: repeat(var(--col-count, 1), minmax(180px, 1fr));
     gap: 1rem;
     align-items: start;
+    overflow-x: auto;
+    padding-bottom: 0.25rem;
   }
   .column {
     border: 1px solid var(--border);
