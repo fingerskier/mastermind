@@ -1,5 +1,5 @@
-import { readCouncil, workingDirFor } from './councils';
 import { readCouncillor } from './councillors';
+import { councilDir } from './paths';
 import { assembleMemoryContext } from './memory';
 import {
   appendEvent,
@@ -69,7 +69,6 @@ export async function runJobNow(
     throw new Error(`Job ${jobId} is not queued (status: ${job.status}).`);
   }
 
-  const council = await readCouncil(councilSlug);
   const councillor = await readCouncillor(councilSlug, job.councillor_slug);
   const key = runKey(councilSlug, councillor.slug);
   if (active.has(key)) {
@@ -98,7 +97,7 @@ export async function runJobNow(
 
       const streams = adapter.run({
         prompt,
-        cwd: workingDirFor(council),
+        cwd: councilDir(councilSlug),
         signal: controller.signal
       });
 
