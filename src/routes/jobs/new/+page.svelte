@@ -2,6 +2,7 @@
   import type { ActionData, PageData } from './$types';
   let { data, form }: { data: PageData; form: ActionData } = $props();
   const c = $derived(data.council);
+  const selectedSlug = $derived(form?.councillor_slug ?? data.preselect);
 </script>
 
 <p><a href="/">&larr; {c.name}</a></p>
@@ -23,9 +24,9 @@
       <span>Assigned councillor</span>
       <select name="councillor_slug" required>
         <option value="">— select —</option>
-        <option value="__all__" selected={form?.councillor_slug === '__all__'}>All councillors ({c.councillors.length})</option>
+        <option value="__all__" selected={selectedSlug === '__all__'}>All councillors ({c.councillors.length})</option>
         {#each c.councillors as cl (cl.slug)}
-          <option value={cl.slug} selected={form?.councillor_slug === cl.slug}>{cl.name} — {cl.role || 'no role'} ({cl.adapter || 'no adapter'})</option>
+          <option value={cl.slug} selected={selectedSlug === cl.slug}>{cl.name} — {cl.role || 'no role'} ({cl.adapter || 'no adapter'})</option>
         {/each}
       </select>
     </label>

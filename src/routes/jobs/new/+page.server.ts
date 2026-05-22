@@ -4,9 +4,10 @@ import { createJob } from '$lib/server/jobs';
 import { startJobInBackground } from '$lib/server/runner';
 import type { Actions, PageServerLoad } from './$types';
 
-export const load: PageServerLoad = async () => {
+export const load: PageServerLoad = async ({ url }) => {
   if (!hasCouncil()) error(404, 'No council in this directory');
-  return { council: await readCouncilWithCouncillors() };
+  const preselect = url.searchParams.get('for') ?? '';
+  return { council: await readCouncilWithCouncillors(), preselect };
 };
 
 export const actions: Actions = {

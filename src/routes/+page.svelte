@@ -60,7 +60,7 @@
     <div class="section-head">
       <h2>Councillors</h2>
       <div class="head-actions">
-        <a class="btn" href="/jobs/new">+ New job</a>
+        <a class="btn" href="/jobs/new?for=__all__">+ Create job for all</a>
         <a class="btn primary" href="/councillors/new">+ New councillor</a>
       </div>
     </div>
@@ -73,10 +73,13 @@
           {@const jobs = recent[cl.slug] ?? []}
           <div class="column">
             <div class="col-head">
-              <a class="col-title" href="/councillors/{cl.slug}">
-                {cl.name}
-                {#if running.has(cl.slug)}<span class="dot running" title="Running a job">●</span>{/if}
-              </a>
+              <div class="col-head-row">
+                <a class="col-title" href="/councillors/{cl.slug}">
+                  {cl.name}
+                  {#if running.has(cl.slug)}<span class="dot running" title="Running a job">●</span>{/if}
+                </a>
+                <a class="col-add" href="/jobs/new?for={cl.slug}" title="New job for {cl.name}" aria-label="New job for {cl.name}">+</a>
+              </div>
               <div class="col-sub">
                 {cl.role || 'no role'}{#if cl.adapter} · <code>{cl.adapter}</code>{/if}
               </div>
@@ -166,12 +169,20 @@
     background: rgba(255, 255, 255, 0.01);
   }
   .col-head { margin-bottom: 0.85rem; }
+  .col-head-row { display: flex; justify-content: space-between; align-items: center; gap: 0.5rem; }
   .col-title {
     display: inline-flex; align-items: center; gap: 0.5rem;
     font-weight: 600; font-size: 1.05em;
     color: var(--fg); text-decoration: none;
+    min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
   }
   .col-title:hover { color: var(--accent); }
+  .col-add {
+    flex-shrink: 0; display: inline-flex; align-items: center; justify-content: center;
+    width: 1.6rem; height: 1.6rem; border: 1px solid var(--border); border-radius: 6px;
+    color: var(--muted); text-decoration: none; font-size: 1.1em; line-height: 1;
+  }
+  .col-add:hover { color: var(--accent); border-color: var(--accent); }
   .col-sub { color: var(--muted); font-size: 0.85em; margin-top: 0.25rem; }
   .col-empty { color: var(--muted); font-size: 0.9em; margin: 0; padding: 0.5rem 0 0; }
 
