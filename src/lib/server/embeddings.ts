@@ -6,7 +6,7 @@ import { gzipSync } from 'node:zlib';
 
 import { indexDbPath, indexDirPath } from './paths';
 
-export type ChunkKind = 'memory' | 'job_input' | 'job_output' | 'transcript' | 'persona';
+export type ChunkKind = 'memory' | 'memory_private' | 'job_input' | 'job_output' | 'transcript' | 'persona';
 
 export interface Embedder {
   dim: number;
