@@ -215,3 +215,30 @@ describe('runner reflection', () => {
     expect(await listPrivateNotes('alice')).toEqual([]);
   });
 });
+
+describe('runner reflection — next job sees prior memory', () => {
+  it('private memory from job 1 appears in job 2 prompt assembly', async () => {
+    const prevEnv = env.LANDSRAAD_COUNCIL_ROOT;
+    const tmpRoot = mkdtempSync(join(tmpdir(), 'landsraad-e2e-'));
+    env.LANDSRAAD_COUNCIL_ROOT = tmpRoot;
+    try {
+      await createCouncil({ name: 'E2E' });
+      await createCouncillor({ name: 'Alice', role: 'cto' });
+
+      const reflection = '<<MEMORY title="Cash flow rule">>\nAlways verify against the ledger.\n<</MEMORY>>';
+      const adapter = makeReflectionAdapter(reflection);
+      const job1 = await createJob({ title: 'Audit', brief: 'investigate cash', councillor_slug: 'alice' });
+      await runJobNow(job1.id, { adapterOverride: adapter });
+
+      const { assembleContextFor } = await import('./context');
+      const ctx = await assembleContextFor('alice', 'follow up on cash');
+      expect(ctx).toContain('# Your memory');
+      expect(ctx).toContain('Cash flow rule');
+      expect(ctx).toContain('Always verify against the ledger.');
+    } finally {
+      rmSync(tmpRoot, { recursive: true, force: true });
+      if (prevEnv === undefined) delete env.LANDSRAAD_COUNCIL_ROOT;
+      else env.LANDSRAAD_COUNCIL_ROOT = prevEnv;
+    }
+  });
+});
