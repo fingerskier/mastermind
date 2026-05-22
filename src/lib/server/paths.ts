@@ -17,6 +17,10 @@ export function councillorDir(councillorSlug: string): string {
   return join(councillorsRoot(), councillorSlug);
 }
 
+export function councillorMemoryDir(councillorSlug: string): string {
+  return join(councillorDir(councillorSlug), 'memory');
+}
+
 export function memoryDir(): string {
   return join(councilRoot(), 'memory');
 }
