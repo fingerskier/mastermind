@@ -13,7 +13,7 @@ process.env.LANDSRAAD_COUNCIL_ROOT = TARGET;
 const { listCouncillors } = await import('../src/lib/server/councillors');
 const { listJobs } = await import('../src/lib/server/jobs');
 const { listNotes } = await import('../src/lib/server/memory');
-const { councilRoot, councillorDir, jobDir, memoryDir } = await import('../src/lib/server/paths');
+const { councilRoot, councillorDir, councillorMemoryDir, jobDir, memoryDir } = await import('../src/lib/server/paths');
 const { closeAll, indexUpsert, setEmbedder } = await import('../src/lib/server/indexer');
 const { xenovaEmbedder } = await import('../src/lib/server/embedder-xenova');
 import type { ChunkKind } from '../src/lib/server/embeddings';
@@ -39,6 +39,28 @@ async function collectMemory(): Promise<Target[]> {
     title: n.title,
     councillor_slug: null
   }));
+}
+
+async function collectPrivateMemories(): Promise<Target[]> {
+  const cs = await listCouncillors();
+  const targets: Target[] = [];
+  for (const c of cs) {
+    const dir = councillorMemoryDir(c.slug);
+    if (!existsSync(dir)) continue;
+    const entries = await readdir(dir, { withFileTypes: true });
+    for (const e of entries) {
+      if (!e.isFile() || !e.name.endsWith('.md')) continue;
+      const slug = e.name.slice(0, -3);
+      targets.push({
+        kind: 'memory_private',
+        ref_id: `${c.slug}/${slug}`,
+        path: join(dir, e.name),
+        title: slug,
+        councillor_slug: c.slug
+      });
+    }
+  }
+  return targets;
 }
 
 async function collectPersonas(): Promise<Target[]> {
@@ -82,7 +104,12 @@ async function reindex(): Promise<void> {
   console.log(`Reindexing council at ${councilRoot()}`);
   setEmbedder(xenovaEmbedder());
 
-  const targets = [...(await collectMemory()), ...(await collectPersonas()), ...(await collectJobs())];
+  const targets = [
+    ...(await collectMemory()),
+    ...(await collectPrivateMemories()),
+    ...(await collectPersonas()),
+    ...(await collectJobs())
+  ];
   console.log(`  ${targets.length} document(s) to consider`);
 
   let indexed = 0;
