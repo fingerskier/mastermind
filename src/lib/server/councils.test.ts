@@ -4,8 +4,9 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { env } from 'node:process';
 
-import { createCouncil, deleteCouncil, listCouncils, readCouncilWithCouncillors, updateCouncil } from './councils';
+import { createCouncil, deleteCouncil, listCouncils, readCouncil, readCouncilWithCouncillors, updateCouncil, workingDirFor } from './councils';
 import { createCouncillor, deleteCouncillor, readCouncillor, updateCouncillor } from './councillors';
+import { councilDir } from './paths';
 
 let tmpRoot: string;
 let prevEnv: string | undefined;
@@ -56,6 +57,53 @@ describe('councils', () => {
     await createCouncil({ name: 'Temp' });
     await deleteCouncil('temp');
     expect(await listCouncils()).toEqual([]);
+  });
+
+  it('defaults working_dir to null and resolves to the council folder', async () => {
+    const c = await createCouncil({ name: 'Default WD' });
+    expect(c.working_dir).toBeNull();
+    expect(workingDirFor(c)).toBe(councilDir('default-wd'));
+  });
+
+  it('persists a working_dir override', async () => {
+    await createCouncil({ name: 'Has WD' });
+    const overrideDir = mkdtempSync(join(tmpdir(), 'landsraad-wd-'));
+    try {
+      const updated = await updateCouncil('has-wd', { working_dir: overrideDir });
+      expect(updated.working_dir).toBe(overrideDir);
+      expect(workingDirFor(updated)).toBe(overrideDir);
+      const reread = await readCouncil('has-wd');
+      expect(reread.working_dir).toBe(overrideDir);
+    } finally {
+      rmSync(overrideDir, { recursive: true, force: true });
+    }
+  });
+
+  it('clears working_dir when given an empty string', async () => {
+    await createCouncil({ name: 'Clear WD' });
+    const overrideDir = mkdtempSync(join(tmpdir(), 'landsraad-wd-'));
+    try {
+      await updateCouncil('clear-wd', { working_dir: overrideDir });
+      const cleared = await updateCouncil('clear-wd', { working_dir: '' });
+      expect(cleared.working_dir).toBeNull();
+      expect(workingDirFor(cleared)).toBe(councilDir('clear-wd'));
+    } finally {
+      rmSync(overrideDir, { recursive: true, force: true });
+    }
+  });
+
+  it('rejects a non-existent working_dir', async () => {
+    await createCouncil({ name: 'Bad WD' });
+    await expect(
+      updateCouncil('bad-wd', { working_dir: join(tmpRoot, 'nope-does-not-exist') })
+    ).rejects.toThrow(/does not exist/);
+  });
+
+  it('rejects a relative working_dir', async () => {
+    await createCouncil({ name: 'Rel WD' });
+    await expect(updateCouncil('rel-wd', { working_dir: './oops' })).rejects.toThrow(
+      /absolute/
+    );
   });
 });
 

@@ -17,14 +17,15 @@ export const actions: Actions = {
     const name = String(form.get('name') ?? '').trim();
     const description = String(form.get('description') ?? '').trim();
     const template = String(form.get('template') ?? '').trim() || null;
+    const working_dir = String(form.get('working_dir') ?? '').trim() || null;
 
-    if (!name) return fail(400, { name, description, template, error: 'Name is required.' });
+    if (!name) return fail(400, { name, description, template, working_dir, error: 'Name is required.' });
 
     try {
-      await updateCouncil(params.slug, { name, description, template });
+      await updateCouncil(params.slug, { name, description, template, working_dir });
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Failed to update council.';
-      return fail(400, { name, description, template, error: message });
+      return fail(400, { name, description, template, working_dir, error: message });
     }
     redirect(303, `/councils/${params.slug}`);
   }

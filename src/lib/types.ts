@@ -3,6 +3,7 @@ export interface Council {
   name: string;
   description: string;
   template: string | null;
+  working_dir: string | null;
   created_at: string;
 }
 

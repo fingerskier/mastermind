@@ -1,6 +1,6 @@
-import { mkdir, readFile, readdir, rm, writeFile } from 'node:fs/promises';
+import { mkdir, readFile, readdir, rm, stat, writeFile } from 'node:fs/promises';
 import { existsSync } from 'node:fs';
-import { join } from 'node:path';
+import { isAbsolute, join } from 'node:path';
 import type { Council } from '$lib/types';
 import { councilDir, councilsRoot, slugify } from './paths';
 import { listCouncillors } from './councillors';
@@ -11,12 +11,33 @@ export interface NewCouncilInput {
   name: string;
   description?: string;
   template?: string | null;
+  working_dir?: string | null;
 }
 
 export interface UpdateCouncilInput {
   name?: string;
   description?: string;
   template?: string | null;
+  working_dir?: string | null;
+}
+
+async function validateWorkingDir(dir: string): Promise<void> {
+  if (!isAbsolute(dir)) {
+    throw new Error(`Working dir must be an absolute path, got "${dir}".`);
+  }
+  if (!existsSync(dir)) {
+    throw new Error(`Working dir "${dir}" does not exist.`);
+  }
+  const st = await stat(dir);
+  if (!st.isDirectory()) {
+    throw new Error(`Working dir "${dir}" is not a directory.`);
+  }
+}
+
+export function workingDirFor(council: Council): string {
+  return council.working_dir && council.working_dir.trim()
+    ? council.working_dir
+    : councilDir(council.slug);
 }
 
 export async function listCouncils(): Promise<Council[]> {
@@ -36,8 +57,15 @@ export async function listCouncils(): Promise<Council[]> {
 export async function readCouncil(slug: string): Promise<Council> {
   const file = join(councilDir(slug), COUNCIL_FILE);
   const raw = await readFile(file, 'utf8');
-  const parsed = JSON.parse(raw) as Council;
-  return { ...parsed, slug };
+  const parsed = JSON.parse(raw) as Partial<Council>;
+  return {
+    slug,
+    name: parsed.name ?? '',
+    description: parsed.description ?? '',
+    template: parsed.template ?? null,
+    working_dir: parsed.working_dir ?? null,
+    created_at: parsed.created_at ?? new Date(0).toISOString()
+  };
 }
 
 export async function createCouncil(input: NewCouncilInput): Promise<Council> {
@@ -45,11 +73,15 @@ export async function createCouncil(input: NewCouncilInput): Promise<Council> {
   const dir = councilDir(slug);
   if (existsSync(dir)) throw new Error(`A council named "${input.name}" already exists.`);
 
+  const working_dir = input.working_dir?.trim() || null;
+  if (working_dir) await validateWorkingDir(working_dir);
+
   const council: Council = {
     slug,
     name: input.name.trim(),
     description: (input.description ?? '').trim(),
     template: input.template ?? null,
+    working_dir,
     created_at: new Date().toISOString()
   };
 
@@ -60,11 +92,24 @@ export async function createCouncil(input: NewCouncilInput): Promise<Council> {
 
 export async function updateCouncil(slug: string, input: UpdateCouncilInput): Promise<Council> {
   const current = await readCouncil(slug);
+
+  let working_dir = current.working_dir;
+  if (input.working_dir !== undefined) {
+    const trimmed = input.working_dir?.trim() ?? '';
+    if (trimmed) {
+      await validateWorkingDir(trimmed);
+      working_dir = trimmed;
+    } else {
+      working_dir = null;
+    }
+  }
+
   const next: Council = {
     ...current,
     name: input.name?.trim() ?? current.name,
     description: input.description?.trim() ?? current.description,
-    template: input.template === undefined ? current.template : input.template
+    template: input.template === undefined ? current.template : input.template,
+    working_dir
   };
   await writeFile(join(councilDir(slug), COUNCIL_FILE), JSON.stringify(next, null, 2) + '\n', 'utf8');
   return next;
