@@ -12,6 +12,7 @@ export interface Councillor {
   role: string;
   adapter: string;
   persona: string;
+  reflect: boolean;
   created_at: string;
 }
 
