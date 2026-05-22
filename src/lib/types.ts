@@ -33,6 +33,8 @@ export interface Job {
   finished_at: string | null;
   exit_code: number | null;
   error: string | null;
+  memory_slugs?: string[];
+  reflection_error?: string;
 }
 
 export interface JobEvent {
@@ -45,7 +47,9 @@ export interface JobEvent {
     | 'succeeded'
     | 'failed'
     | 'cancelled'
-    | 'note';
+    | 'note'
+    | 'reflected'
+    | 'reflection_failed';
   message?: string;
 }
 
