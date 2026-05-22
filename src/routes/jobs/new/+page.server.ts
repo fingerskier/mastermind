@@ -26,6 +26,31 @@ export const actions: Actions = {
       });
     }
 
+    if (councillor_slug === '__all__') {
+      const council = await readCouncilWithCouncillors();
+      if (council.councillors.length === 0) {
+        return fail(400, { error: 'No councillors to assign.', title, brief, councillor_slug });
+      }
+      const now = new Date();
+      const created: string[] = [];
+      try {
+        for (let i = 0; i < council.councillors.length; i++) {
+          const cl = council.councillors[i];
+          const stamp = new Date(now.getTime() + i);
+          const job = await createJob(
+            { title, brief, councillor_slug: cl.slug },
+            stamp
+          );
+          created.push(job.id);
+        }
+      } catch (err) {
+        const message = err instanceof Error ? err.message : 'Failed to create job.';
+        return fail(400, { error: message, title, brief, councillor_slug });
+      }
+      if (start_now) for (const id of created) startJobInBackground(id);
+      redirect(303, '/');
+    }
+
     let jobId: string;
     try {
       const job = await createJob({ title, brief, councillor_slug });
