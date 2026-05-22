@@ -1,6 +1,6 @@
 import { readCouncillor } from './councillors';
 import { councilRoot } from './paths';
-import { assembleMemoryContext } from './memory';
+import { assembleContextFor } from './context';
 import {
   appendEvent,
   appendTranscript,
@@ -48,7 +48,7 @@ export interface RunOptions {
 }
 
 async function buildPrompt(job: Job, personaBody: string): Promise<string> {
-  const memCtx = await assembleMemoryContext();
+  const memCtx = await assembleContextFor(job.councillor_slug, job.brief);
   const sections: string[] = [];
   if (personaBody.trim()) sections.push(`# Persona\n\n${personaBody.trim()}`);
   if (memCtx) sections.push(memCtx);
