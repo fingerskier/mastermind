@@ -49,7 +49,7 @@ export function slugify(input: string): string {
 }
 
 export function jobIdFor(title: string, now: Date = new Date()): string {
-  const ts = now.toISOString().replace(/[:.]/g, '-').replace(/-\d{3}Z$/, 'Z');
+  const ts = now.toISOString().replace(/[:.]/g, '-');
   const titleSlug = slugify(title);
   return `${ts}-${titleSlug}`;
 }
