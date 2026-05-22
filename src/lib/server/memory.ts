@@ -3,6 +3,7 @@ import { existsSync } from 'node:fs';
 import { join } from 'node:path';
 import type { MemoryNote } from '$lib/types';
 import { councilDir, memoryDir, slugify } from './paths';
+import { indexDelete, indexUpsert } from './indexer';
 
 const NOTE_EXT = '.md';
 
@@ -60,7 +61,16 @@ export async function createNote(councilSlug: string, input: UpsertNoteInput): P
     ? input.body
     : `# ${title}\n\n${input.body}`;
   await writeFile(file, body, 'utf8');
-  return readNote(councilSlug, slug);
+  const note = await readNote(councilSlug, slug);
+  await indexUpsert(councilSlug, {
+    kind: 'memory',
+    ref_id: slug,
+    text: note.body,
+    source_path: file,
+    source_mtime: note.updated_at,
+    title: note.title
+  });
+  return note;
 }
 
 export async function updateNote(
@@ -71,13 +81,23 @@ export async function updateNote(
   const file = noteFile(councilSlug, slug);
   if (!existsSync(file)) throw new Error(`Memory note "${slug}" does not exist.`);
   await writeFile(file, body, 'utf8');
-  return readNote(councilSlug, slug);
+  const note = await readNote(councilSlug, slug);
+  await indexUpsert(councilSlug, {
+    kind: 'memory',
+    ref_id: slug,
+    text: note.body,
+    source_path: file,
+    source_mtime: note.updated_at,
+    title: note.title
+  });
+  return note;
 }
 
 export async function deleteNote(councilSlug: string, slug: string): Promise<void> {
   const file = noteFile(councilSlug, slug);
   if (!existsSync(file)) return;
   await rm(file, { force: true });
+  indexDelete(councilSlug, 'memory', slug);
 }
 
 export async function assembleMemoryContext(councilSlug: string): Promise<string> {

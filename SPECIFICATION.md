@@ -11,7 +11,7 @@ Landsraad is a local-first, single-directory **council chamber** for AI agents. 
 - No "Secretary" singleton agent. The director **is** the secretary.
 - No multi-user, no auth, no remote hosting. One operator, one machine.
 - No provider-native SDK code yet. v1 invokes adapters as **subprocesses** (CLI tools). SDK adapters land in a future spec.
-- No retrieval index, no embeddings. Memory is plain markdown files. (A retrieval pass will land separately if it proves needed.)
+- ~~No retrieval index, no embeddings.~~ Retrieval index landing in v2 (see `docs/embeddings.md`): per-council libsql + sqlite-vec, on-write hooks, `npm run reindex` for backfill. Memory still lives as plain markdown — the index is regenerable cache.
 - No cron / recurring jobs. v1 jobs are one-shot.
 - No remote provider permission/auth orchestration. If a CLI needs login, the user logs in once outside Landsraad.
 

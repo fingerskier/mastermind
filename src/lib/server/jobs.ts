@@ -3,6 +3,7 @@ import { existsSync } from 'node:fs';
 import { join } from 'node:path';
 import type { Job, JobEvent, JobStatus } from '$lib/types';
 import { councilDir, jobDir, jobIdFor, jobsDir } from './paths';
+import { indexUpsert } from './indexer';
 
 const JOB_FILE = 'job.json';
 const INPUT_FILE = 'input.md';
@@ -91,7 +92,18 @@ export async function readEvents(councilSlug: string, jobId: string): Promise<Jo
 }
 
 export async function writeInput(councilSlug: string, jobId: string, body: string): Promise<void> {
-  await writeFile(join(jobDir(councilSlug, jobId), INPUT_FILE), body, 'utf8');
+  const file = join(jobDir(councilSlug, jobId), INPUT_FILE);
+  await writeFile(file, body, 'utf8');
+  const job = await readJob(councilSlug, jobId).catch(() => null);
+  await indexUpsert(councilSlug, {
+    kind: 'job_input',
+    ref_id: jobId,
+    text: body,
+    source_path: file,
+    source_mtime: new Date().toISOString(),
+    title: job?.title ?? null,
+    councillor_slug: job?.councillor_slug ?? null
+  });
 }
 
 export async function readInput(councilSlug: string, jobId: string): Promise<string> {
@@ -109,7 +121,30 @@ export async function readTranscript(councilSlug: string, jobId: string): Promis
 }
 
 export async function writeOutput(councilSlug: string, jobId: string, body: string): Promise<void> {
-  await writeFile(join(jobDir(councilSlug, jobId), OUTPUT_FILE), body, 'utf8');
+  const file = join(jobDir(councilSlug, jobId), OUTPUT_FILE);
+  await writeFile(file, body, 'utf8');
+  const job = await readJob(councilSlug, jobId).catch(() => null);
+  await indexUpsert(councilSlug, {
+    kind: 'job_output',
+    ref_id: jobId,
+    text: body,
+    source_path: file,
+    source_mtime: new Date().toISOString(),
+    title: job?.title ?? null,
+    councillor_slug: job?.councillor_slug ?? null
+  });
+  const transcript = await readTranscript(councilSlug, jobId).catch(() => '');
+  if (transcript.trim()) {
+    await indexUpsert(councilSlug, {
+      kind: 'transcript',
+      ref_id: jobId,
+      text: transcript,
+      source_path: join(jobDir(councilSlug, jobId), TRANSCRIPT_FILE),
+      source_mtime: new Date().toISOString(),
+      title: job?.title ?? null,
+      councillor_slug: job?.councillor_slug ?? null
+    });
+  }
 }
 
 export async function readOutput(councilSlug: string, jobId: string): Promise<string> {

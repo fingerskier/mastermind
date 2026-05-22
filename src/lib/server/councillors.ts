@@ -3,6 +3,7 @@ import { existsSync } from 'node:fs';
 import { join } from 'node:path';
 import type { Councillor } from '$lib/types';
 import { councilDir, councillorDir, slugify } from './paths';
+import { indexDelete, indexUpsert } from './indexer';
 
 const COUNCILLOR_FILE = 'councillor.json';
 const PERSONA_FILE = 'persona.md';
@@ -69,6 +70,17 @@ export async function createCouncillor(councilSlug: string, input: NewCouncillor
   await mkdir(dir, { recursive: true });
   await writeFile(join(dir, COUNCILLOR_FILE), JSON.stringify(meta, null, 2) + '\n', 'utf8');
   await writeFile(join(dir, PERSONA_FILE), persona, 'utf8');
+  if (persona.trim()) {
+    await indexUpsert(councilSlug, {
+      kind: 'persona',
+      ref_id: slug,
+      text: persona,
+      source_path: join(dir, PERSONA_FILE),
+      source_mtime: meta.created_at,
+      title: meta.name,
+      councillor_slug: slug
+    });
+  }
   return { ...meta, persona };
 }
 
@@ -89,6 +101,19 @@ export async function updateCouncillor(
   const dir = councillorDir(councilSlug, slug);
   await writeFile(join(dir, COUNCILLOR_FILE), JSON.stringify(meta, null, 2) + '\n', 'utf8');
   await writeFile(join(dir, PERSONA_FILE), persona, 'utf8');
+  if (persona.trim()) {
+    await indexUpsert(councilSlug, {
+      kind: 'persona',
+      ref_id: slug,
+      text: persona,
+      source_path: join(dir, PERSONA_FILE),
+      source_mtime: new Date().toISOString(),
+      title: meta.name,
+      councillor_slug: slug
+    });
+  } else {
+    indexDelete(councilSlug, 'persona', slug);
+  }
   return { ...meta, persona };
 }
 
@@ -96,4 +121,5 @@ export async function deleteCouncillor(councilSlug: string, slug: string): Promi
   const dir = councillorDir(councilSlug, slug);
   if (!existsSync(dir)) return;
   await rm(dir, { recursive: true, force: true });
+  indexDelete(councilSlug, 'persona', slug);
 }
