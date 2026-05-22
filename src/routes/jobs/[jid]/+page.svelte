@@ -75,6 +75,17 @@
   </section>
 {/if}
 
+{#if job.memory_slugs && job.memory_slugs.length > 0}
+  <section>
+    <h2>Memories created</h2>
+    <ul class="mem-list">
+      {#each job.memory_slugs as slug}
+        <li><a href="/councillors/{job.councillor_slug}/memory/{slug}">{slug}</a></li>
+      {/each}
+    </ul>
+  </section>
+{/if}
+
 <details>
   <summary>Prompt sent to adapter</summary>
   <pre class="block">{data.input}</pre>
@@ -115,4 +126,7 @@
   summary { cursor: pointer; color: var(--muted); }
   .events { list-style: none; padding: 0.5rem 0; font-size: 0.85em; }
   .events code { color: var(--muted); font-size: 0.85em; margin-right: 0.5rem; }
+  .mem-list { list-style: none; padding: 0; display: grid; gap: 0.3rem; }
+  .mem-list a { color: var(--fg); }
+  .mem-list a:hover { color: var(--accent); }
 </style>
