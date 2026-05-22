@@ -1,30 +1,40 @@
-import { homedir } from 'node:os';
 import { join } from 'node:path';
-import { env } from 'node:process';
+import { cwd, env } from 'node:process';
 
-export function councilsRoot(): string {
-  if (env.LANDSRAAD_COUNCILS_ROOT) return env.LANDSRAAD_COUNCILS_ROOT;
-  return join(homedir(), '.landsraad', 'councils');
+export function councilRoot(): string {
+  return env.LANDSRAAD_COUNCIL_ROOT || cwd();
 }
 
-export function councilDir(slug: string): string {
-  return join(councilsRoot(), slug);
+export function councilFile(): string {
+  return join(councilRoot(), 'council.json');
 }
 
-export function councillorDir(councilSlug: string, councillorSlug: string): string {
-  return join(councilDir(councilSlug), 'councillors', councillorSlug);
+export function councillorsRoot(): string {
+  return join(councilRoot(), 'councillors');
 }
 
-export function memoryDir(councilSlug: string): string {
-  return join(councilDir(councilSlug), 'memory');
+export function councillorDir(councillorSlug: string): string {
+  return join(councillorsRoot(), councillorSlug);
 }
 
-export function jobsDir(councilSlug: string): string {
-  return join(councilDir(councilSlug), 'jobs');
+export function memoryDir(): string {
+  return join(councilRoot(), 'memory');
 }
 
-export function jobDir(councilSlug: string, jobId: string): string {
-  return join(jobsDir(councilSlug), jobId);
+export function jobsDir(): string {
+  return join(councilRoot(), 'jobs');
+}
+
+export function jobDir(jobId: string): string {
+  return join(jobsDir(), jobId);
+}
+
+export function indexDirPath(): string {
+  return join(councilRoot(), '.index');
+}
+
+export function indexDbPath(): string {
+  return join(indexDirPath(), 'embeddings.db');
 }
 
 export function slugify(input: string): string {

@@ -2,7 +2,8 @@ import { mkdir, readFile, readdir, rm, writeFile } from 'node:fs/promises';
 import { existsSync } from 'node:fs';
 import { join } from 'node:path';
 import type { Councillor } from '$lib/types';
-import { councilDir, councillorDir, slugify } from './paths';
+import { councillorDir, councillorsRoot, slugify } from './paths';
+import { hasCouncil } from './councils';
 import { indexDelete, indexUpsert } from './indexer';
 
 const COUNCILLOR_FILE = 'councillor.json';
@@ -30,33 +31,33 @@ interface CouncillorMeta {
   created_at: string;
 }
 
-export async function listCouncillors(councilSlug: string): Promise<Councillor[]> {
-  const dir = join(councilDir(councilSlug), 'councillors');
+export async function listCouncillors(): Promise<Councillor[]> {
+  const dir = councillorsRoot();
   if (!existsSync(dir)) return [];
   const entries = await readdir(dir, { withFileTypes: true });
   const councillors: Councillor[] = [];
   for (const entry of entries) {
     if (!entry.isDirectory()) continue;
-    const c = await readCouncillor(councilSlug, entry.name).catch(() => null);
+    const c = await readCouncillor(entry.name).catch(() => null);
     if (c) councillors.push(c);
   }
   councillors.sort((a, b) => a.name.localeCompare(b.name));
   return councillors;
 }
 
-export async function readCouncillor(councilSlug: string, slug: string): Promise<Councillor> {
-  const dir = councillorDir(councilSlug, slug);
+export async function readCouncillor(slug: string): Promise<Councillor> {
+  const dir = councillorDir(slug);
   const metaRaw = await readFile(join(dir, COUNCILLOR_FILE), 'utf8');
   const meta = JSON.parse(metaRaw) as CouncillorMeta;
   const persona = await readFile(join(dir, PERSONA_FILE), 'utf8').catch(() => '');
   return { ...meta, slug, persona };
 }
 
-export async function createCouncillor(councilSlug: string, input: NewCouncillorInput): Promise<Councillor> {
+export async function createCouncillor(input: NewCouncillorInput): Promise<Councillor> {
+  if (!hasCouncil()) throw new Error('No council exists in the current directory.');
   const slug = slugify(input.name);
-  const dir = councillorDir(councilSlug, slug);
+  const dir = councillorDir(slug);
   if (existsSync(dir)) throw new Error(`A councillor named "${input.name}" already exists.`);
-  if (!existsSync(councilDir(councilSlug))) throw new Error(`Council "${councilSlug}" does not exist.`);
 
   const meta: CouncillorMeta = {
     slug,
@@ -71,7 +72,7 @@ export async function createCouncillor(councilSlug: string, input: NewCouncillor
   await writeFile(join(dir, COUNCILLOR_FILE), JSON.stringify(meta, null, 2) + '\n', 'utf8');
   await writeFile(join(dir, PERSONA_FILE), persona, 'utf8');
   if (persona.trim()) {
-    await indexUpsert(councilSlug, {
+    await indexUpsert({
       kind: 'persona',
       ref_id: slug,
       text: persona,
@@ -85,11 +86,10 @@ export async function createCouncillor(councilSlug: string, input: NewCouncillor
 }
 
 export async function updateCouncillor(
-  councilSlug: string,
   slug: string,
   input: UpdateCouncillorInput
 ): Promise<Councillor> {
-  const current = await readCouncillor(councilSlug, slug);
+  const current = await readCouncillor(slug);
   const meta: CouncillorMeta = {
     slug: current.slug,
     name: input.name?.trim() ?? current.name,
@@ -98,11 +98,11 @@ export async function updateCouncillor(
     created_at: current.created_at
   };
   const persona = input.persona ?? current.persona;
-  const dir = councillorDir(councilSlug, slug);
+  const dir = councillorDir(slug);
   await writeFile(join(dir, COUNCILLOR_FILE), JSON.stringify(meta, null, 2) + '\n', 'utf8');
   await writeFile(join(dir, PERSONA_FILE), persona, 'utf8');
   if (persona.trim()) {
-    await indexUpsert(councilSlug, {
+    await indexUpsert({
       kind: 'persona',
       ref_id: slug,
       text: persona,
@@ -112,14 +112,14 @@ export async function updateCouncillor(
       councillor_slug: slug
     });
   } else {
-    indexDelete(councilSlug, 'persona', slug);
+    indexDelete('persona', slug);
   }
   return { ...meta, persona };
 }
 
-export async function deleteCouncillor(councilSlug: string, slug: string): Promise<void> {
-  const dir = councillorDir(councilSlug, slug);
+export async function deleteCouncillor(slug: string): Promise<void> {
+  const dir = councillorDir(slug);
   if (!existsSync(dir)) return;
   await rm(dir, { recursive: true, force: true });
-  indexDelete(councilSlug, 'persona', slug);
+  indexDelete('persona', slug);
 }

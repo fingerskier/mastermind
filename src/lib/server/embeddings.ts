@@ -1,11 +1,10 @@
 import Database from 'better-sqlite3';
 import * as sqliteVec from 'sqlite-vec';
 import { mkdirSync } from 'node:fs';
-import { join } from 'node:path';
 import { createHash } from 'node:crypto';
 import { gzipSync } from 'node:zlib';
 
-import { councilDir } from './paths';
+import { indexDbPath, indexDirPath } from './paths';
 
 export type ChunkKind = 'memory' | 'job_input' | 'job_output' | 'transcript' | 'persona';
 
@@ -51,14 +50,6 @@ export interface IndexHandle {
   dim: number;
 }
 
-export function indexDir(councilSlug: string): string {
-  return join(councilDir(councilSlug), '.index');
-}
-
-export function indexPath(councilSlug: string): string {
-  return join(indexDir(councilSlug), 'embeddings.db');
-}
-
 export function gzipDensity(text: string): number {
   if (!text) return 0;
   const raw = Buffer.byteLength(text, 'utf8');
@@ -78,10 +69,9 @@ function vecLiteral(v: Float32Array): Buffer {
   return Buffer.from(v.buffer, v.byteOffset, v.byteLength);
 }
 
-export function openIndex(councilSlug: string, embedder: Embedder): IndexHandle {
-  const dir = indexDir(councilSlug);
-  mkdirSync(dir, { recursive: true });
-  const path = indexPath(councilSlug);
+export function openIndex(embedder: Embedder): IndexHandle {
+  mkdirSync(indexDirPath(), { recursive: true });
+  const path = indexDbPath();
   const db = new Database(path);
   sqliteVec.load(db);
 

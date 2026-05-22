@@ -8,7 +8,7 @@ export const load: PageServerLoad = async () => {
 };
 
 export const actions: Actions = {
-  default: async ({ request, params }) => {
+  default: async ({ request }) => {
     const form = await request.formData();
     const name = String(form.get('name') ?? '').trim();
     const role = String(form.get('role') ?? '').trim();
@@ -20,12 +20,12 @@ export const actions: Actions = {
 
     let cSlug: string;
     try {
-      const c = await createCouncillor(params.slug, { name, role, adapter, persona });
+      const c = await createCouncillor({ name, role, adapter, persona });
       cSlug = c.slug;
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Failed to create councillor.';
       return fail(400, { name, role, adapter, persona, error: message });
     }
-    redirect(303, `/councils/${params.slug}/councillors/${cSlug}`);
+    redirect(303, `/councillors/${cSlug}`);
   }
 };

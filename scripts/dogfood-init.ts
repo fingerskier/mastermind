@@ -1,27 +1,32 @@
 import { existsSync } from 'node:fs';
-import { createCouncil, readCouncil } from '../src/lib/server/councils';
-import { createCouncillor, listCouncillors } from '../src/lib/server/councillors';
-import { createNote, listNotes } from '../src/lib/server/memory';
-import { createJob, listJobs } from '../src/lib/server/jobs';
-import { councilDir } from '../src/lib/server/paths';
+import { mkdir } from 'node:fs/promises';
+import { resolve } from 'node:path';
 
-const COUNCIL_SLUG = 'dogfood';
-const COUNCIL_NAME = 'Dogfood';
+const TARGET_REL = process.argv[2] ?? './dogfood';
+const TARGET = resolve(process.cwd(), TARGET_REL);
+
+// Route every server-side write into TARGET via the LANDSRAAD_COUNCIL_ROOT env var.
+process.env.LANDSRAAD_COUNCIL_ROOT = TARGET;
+
+const { hasCouncil, createCouncil } = await import('../src/lib/server/councils');
+const { createCouncillor, listCouncillors } = await import('../src/lib/server/councillors');
+const { createNote, listNotes } = await import('../src/lib/server/memory');
+const { createJob, listJobs } = await import('../src/lib/server/jobs');
 
 async function main(): Promise<void> {
-  const dir = councilDir(COUNCIL_SLUG);
-  if (!existsSync(dir)) {
+  if (!existsSync(TARGET)) await mkdir(TARGET, { recursive: true });
+
+  if (!hasCouncil()) {
     await createCouncil({
-      name: COUNCIL_NAME,
+      name: 'Dogfood',
       description: 'Built-in council used to exercise Landsraad locally.'
     });
-    console.log(`Created council at ${dir}`);
+    console.log(`Created council at ${TARGET}`);
   } else {
-    await readCouncil(COUNCIL_SLUG);
-    console.log(`Council already exists at ${dir}`);
+    console.log(`Council already exists at ${TARGET}`);
   }
 
-  const existing = new Set((await listCouncillors(COUNCIL_SLUG)).map((c) => c.slug));
+  const existing = new Set((await listCouncillors()).map((c) => c.slug));
   const seeds = [
     {
       name: 'Mocky',
@@ -38,22 +43,22 @@ async function main(): Promise<void> {
   ];
   for (const c of seeds) {
     if (existing.has(c.name.toLowerCase())) continue;
-    await createCouncillor(COUNCIL_SLUG, c);
+    await createCouncillor(c);
     console.log(`+ councillor: ${c.name}`);
   }
 
-  const noteTitles = new Set((await listNotes(COUNCIL_SLUG)).map((n) => n.title.toLowerCase()));
+  const noteTitles = new Set((await listNotes()).map((n) => n.title.toLowerCase()));
   if (!noteTitles.has('house rules')) {
-    await createNote(COUNCIL_SLUG, {
+    await createNote({
       title: 'House Rules',
       body: '- Be concise.\n- Cite assumptions explicitly.\n- Never invent facts about the user.\n'
     });
     console.log('+ memory note: House Rules');
   }
 
-  const jobs = await listJobs(COUNCIL_SLUG);
+  const jobs = await listJobs();
   if (jobs.length === 0) {
-    const j = await createJob(COUNCIL_SLUG, {
+    const j = await createJob({
       title: 'Hello world',
       brief: 'Greet the council in one short paragraph.',
       councillor_slug: 'mocky'
@@ -61,7 +66,8 @@ async function main(): Promise<void> {
     console.log(`+ sample job: ${j.id}`);
   }
 
-  console.log('\nDone. Start the app with `npm run dev` and visit /councils/dogfood.');
+  console.log(`\nDone. To use this council, run:\n  cd ${TARGET_REL}\n  npx landsraad\n`);
+  console.log(`Or for dev with LANDSRAAD_COUNCIL_ROOT=${TARGET_REL} npm run dev`);
 }
 
 main().catch((err) => {

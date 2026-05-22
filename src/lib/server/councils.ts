@@ -1,11 +1,8 @@
-import { mkdir, readFile, readdir, rm, writeFile } from 'node:fs/promises';
+import { mkdir, readFile, rm, writeFile } from 'node:fs/promises';
 import { existsSync } from 'node:fs';
-import { join } from 'node:path';
-import type { Council } from '$lib/types';
-import { councilDir, councilsRoot, slugify } from './paths';
+import type { Council, CouncilWithCouncillors } from '$lib/types';
+import { councilFile, councilRoot, councillorsRoot, slugify } from './paths';
 import { listCouncillors } from './councillors';
-
-const COUNCIL_FILE = 'council.json';
 
 export interface NewCouncilInput {
   name: string;
@@ -19,65 +16,65 @@ export interface UpdateCouncilInput {
   template?: string | null;
 }
 
-export async function listCouncils(): Promise<Council[]> {
-  const root = councilsRoot();
-  if (!existsSync(root)) return [];
-  const entries = await readdir(root, { withFileTypes: true });
-  const councils: Council[] = [];
-  for (const entry of entries) {
-    if (!entry.isDirectory()) continue;
-    const council = await readCouncil(entry.name).catch(() => null);
-    if (council) councils.push(council);
-  }
-  councils.sort((a, b) => a.name.localeCompare(b.name));
-  return councils;
+export function hasCouncil(): boolean {
+  return existsSync(councilFile());
 }
 
-export async function readCouncil(slug: string): Promise<Council> {
-  const file = join(councilDir(slug), COUNCIL_FILE);
-  const raw = await readFile(file, 'utf8');
-  const parsed = JSON.parse(raw) as Council;
-  return { ...parsed, slug };
+export async function readCouncil(): Promise<Council> {
+  const raw = await readFile(councilFile(), 'utf8');
+  const parsed = JSON.parse(raw) as Partial<Council>;
+  return {
+    slug: parsed.slug ?? slugify(parsed.name ?? 'council'),
+    name: parsed.name ?? 'Council',
+    description: parsed.description ?? '',
+    template: parsed.template ?? null,
+    created_at: parsed.created_at ?? new Date(0).toISOString()
+  };
 }
 
 export async function createCouncil(input: NewCouncilInput): Promise<Council> {
-  const slug = slugify(input.name);
-  const dir = councilDir(slug);
-  if (existsSync(dir)) throw new Error(`A council named "${input.name}" already exists.`);
+  if (existsSync(councilFile())) {
+    throw new Error(`A council already exists in ${councilRoot()}.`);
+  }
+  const name = input.name.trim();
+  if (!name) throw new Error('Council name is required.');
 
   const council: Council = {
-    slug,
-    name: input.name.trim(),
+    slug: slugify(name),
+    name,
     description: (input.description ?? '').trim(),
     template: input.template ?? null,
     created_at: new Date().toISOString()
   };
 
-  await mkdir(join(dir, 'councillors'), { recursive: true });
-  await writeFile(join(dir, COUNCIL_FILE), JSON.stringify(council, null, 2) + '\n', 'utf8');
+  await mkdir(councillorsRoot(), { recursive: true });
+  await writeFile(councilFile(), JSON.stringify(council, null, 2) + '\n', 'utf8');
   return council;
 }
 
-export async function updateCouncil(slug: string, input: UpdateCouncilInput): Promise<Council> {
-  const current = await readCouncil(slug);
+export async function updateCouncil(input: UpdateCouncilInput): Promise<Council> {
+  const current = await readCouncil();
+  const nextName = input.name?.trim() ?? current.name;
   const next: Council = {
     ...current,
-    name: input.name?.trim() ?? current.name,
+    name: nextName,
+    slug: slugify(nextName),
     description: input.description?.trim() ?? current.description,
     template: input.template === undefined ? current.template : input.template
   };
-  await writeFile(join(councilDir(slug), COUNCIL_FILE), JSON.stringify(next, null, 2) + '\n', 'utf8');
+  await writeFile(councilFile(), JSON.stringify(next, null, 2) + '\n', 'utf8');
   return next;
 }
 
-export async function deleteCouncil(slug: string): Promise<void> {
-  const dir = councilDir(slug);
-  if (!existsSync(dir)) return;
-  await rm(dir, { recursive: true, force: true });
+export async function deleteCouncilData(): Promise<void> {
+  const root = councilRoot();
+  for (const sub of ['council.json', 'councillors', 'memory', 'jobs', '.index']) {
+    await rm(`${root}/${sub}`, { recursive: true, force: true });
+  }
 }
 
-export async function readCouncilWithCouncillors(slug: string) {
-  const council = await readCouncil(slug);
-  const councillors = await listCouncillors(slug);
+export async function readCouncilWithCouncillors(): Promise<CouncilWithCouncillors> {
+  const council = await readCouncil();
+  const councillors = await listCouncillors();
   return { ...council, councillors };
 }

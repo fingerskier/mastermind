@@ -11,52 +11,52 @@ let tmpRoot: string;
 let prevEnv: string | undefined;
 
 beforeEach(async () => {
-  prevEnv = env.LANDSRAAD_COUNCILS_ROOT;
+  prevEnv = env.LANDSRAAD_COUNCIL_ROOT;
   tmpRoot = mkdtempSync(join(tmpdir(), 'landsraad-mem-'));
-  env.LANDSRAAD_COUNCILS_ROOT = tmpRoot;
+  env.LANDSRAAD_COUNCIL_ROOT = tmpRoot;
   await createCouncil({ name: 'Mem Test' });
 });
 
 afterEach(() => {
   rmSync(tmpRoot, { recursive: true, force: true });
-  if (prevEnv === undefined) delete env.LANDSRAAD_COUNCILS_ROOT;
-  else env.LANDSRAAD_COUNCILS_ROOT = prevEnv;
+  if (prevEnv === undefined) delete env.LANDSRAAD_COUNCIL_ROOT;
+  else env.LANDSRAAD_COUNCIL_ROOT = prevEnv;
 });
 
 describe('memory', () => {
   it('starts empty', async () => {
-    expect(await listNotes('mem-test')).toEqual([]);
-    expect(await assembleMemoryContext('mem-test')).toBe('');
+    expect(await listNotes()).toEqual([]);
+    expect(await assembleMemoryContext()).toBe('');
   });
 
   it('creates and reads a note', async () => {
-    const n = await createNote('mem-test', { title: 'Cash on Hand', body: '# Cash on Hand\n\n$1.2M as of today.' });
+    const n = await createNote({ title: 'Cash on Hand', body: '# Cash on Hand\n\n$1.2M as of today.' });
     expect(n.slug).toBe('cash-on-hand');
     expect(n.title).toBe('Cash on Hand');
-    expect(await readNote('mem-test', 'cash-on-hand')).toMatchObject({ slug: 'cash-on-hand' });
+    expect(await readNote('cash-on-hand')).toMatchObject({ slug: 'cash-on-hand' });
   });
 
   it('updates note body', async () => {
-    await createNote('mem-test', { title: 'Note', body: 'v1' });
-    const updated = await updateNote('mem-test', 'note', 'v2');
+    await createNote({ title: 'Note', body: 'v1' });
+    const updated = await updateNote('note', 'v2');
     expect(updated.body).toBe('v2');
   });
 
   it('deletes a note', async () => {
-    await createNote('mem-test', { title: 'Doomed', body: '...' });
-    await deleteNote('mem-test', 'doomed');
-    expect(await listNotes('mem-test')).toEqual([]);
+    await createNote({ title: 'Doomed', body: '...' });
+    await deleteNote('doomed');
+    expect(await listNotes()).toEqual([]);
   });
 
   it('rejects duplicate titles', async () => {
-    await createNote('mem-test', { title: 'X', body: '' });
-    await expect(createNote('mem-test', { title: 'X', body: '' })).rejects.toThrow(/already exists/);
+    await createNote({ title: 'X', body: '' });
+    await expect(createNote({ title: 'X', body: '' })).rejects.toThrow(/already exists/);
   });
 
   it('assembles context with all notes', async () => {
-    await createNote('mem-test', { title: 'Alpha', body: 'a body' });
-    await createNote('mem-test', { title: 'Beta', body: 'b body' });
-    const ctx = await assembleMemoryContext('mem-test');
+    await createNote({ title: 'Alpha', body: 'a body' });
+    await createNote({ title: 'Beta', body: 'b body' });
+    const ctx = await assembleMemoryContext();
     expect(ctx).toContain('# Shared council memory');
     expect(ctx).toContain('Alpha');
     expect(ctx).toContain('a body');

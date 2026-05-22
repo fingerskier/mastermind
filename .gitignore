@@ -143,8 +143,17 @@ vite.config.js.timestamp-*
 vite.config.ts.timestamp-*
 .vite/
 
-# Local Landsraad dogfood council
-.dogfood-council/
+# Local Landsraad council scaffolding (anchored to repo root; when cwd is the council root,
+# e.g. `npm run dev` in this repo, the app writes these here)
+/council.json
+/councillors/
+/memory/
+/jobs/
+/.index/
+
+# dogfood:init target dirs
+/dogfood/
+/.dogfood-council/
 
 # Playwright MCP scratch
 .playwright-mcp/

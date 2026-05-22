@@ -1,19 +1,15 @@
 import { error, fail, redirect } from '@sveltejs/kit';
-import { readCouncil } from '$lib/server/councils';
+import { hasCouncil, readCouncil } from '$lib/server/councils';
 import { createNote } from '$lib/server/memory';
 import type { Actions, PageServerLoad } from './$types';
 
-export const load: PageServerLoad = async ({ params }) => {
-  try {
-    const council = await readCouncil(params.slug);
-    return { council };
-  } catch {
-    error(404, 'Council not found');
-  }
+export const load: PageServerLoad = async () => {
+  if (!hasCouncil()) error(404, 'No council in this directory');
+  return { council: await readCouncil() };
 };
 
 export const actions: Actions = {
-  default: async ({ params, request }) => {
+  default: async ({ request }) => {
     const form = await request.formData();
     const title = String(form.get('title') ?? '').trim();
     const body = String(form.get('body') ?? '');
@@ -21,11 +17,11 @@ export const actions: Actions = {
 
     let slug: string;
     try {
-      slug = (await createNote(params.slug, { title, body })).slug;
+      slug = (await createNote({ title, body })).slug;
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Failed to create note.';
       return fail(400, { error: message, title, body });
     }
-    redirect(303, `/councils/${params.slug}/memory/${slug}`);
+    redirect(303, `/memory/${slug}`);
   }
 };

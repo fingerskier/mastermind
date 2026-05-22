@@ -22,7 +22,7 @@
   onDestroy(() => { if (timer) clearInterval(timer); });
 </script>
 
-<p><a href="/councils/{c.slug}">&larr; {c.name}</a></p>
+<p><a href="/">&larr; {c.name}</a></p>
 
 <header class="head">
   <div>

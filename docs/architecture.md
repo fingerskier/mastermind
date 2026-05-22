@@ -9,7 +9,7 @@ browser <--HTTP--> SvelteKit (Node)
                        |
                        v
                    filesystem
-                   (~/.landsraad/councils/)
+                   (process.cwd() — the council root)
 ```
 
 ## Why SvelteKit (full-stack)
@@ -18,9 +18,13 @@ A v0 with no agent execution is mostly forms + a filesystem CRUD layer. SvelteKi
 
 ## Module boundaries
 
-- `src/lib/server/paths.ts` — slug rules and on-disk path resolution. Single source of truth for "where does this go?".
-- `src/lib/server/councils.ts` — council CRUD.
-- `src/lib/server/councillors.ts` — councillor CRUD (always scoped to a council).
+- `src/lib/server/paths.ts` — slug rules and on-disk path resolution. Single source of truth for "where does this go?". All paths derive from `councilRoot()` (= `cwd` or `LANDSRAAD_COUNCIL_ROOT`).
+- `src/lib/server/councils.ts` — council CRUD (singular: `hasCouncil`, `readCouncil`, `createCouncil`, `updateCouncil`, `deleteCouncilData`).
+- `src/lib/server/councillors.ts` — councillor CRUD.
+- `src/lib/server/memory.ts` — shared-note CRUD.
+- `src/lib/server/jobs.ts` — job CRUD + artifact I/O.
+- `src/lib/server/runner.ts` — in-process job scheduler; one running job per councillor.
+- `src/lib/server/indexer.ts` + `embeddings.ts` — semantic index over markdown surfaces.
 - `src/lib/types.ts` — types shared between server and client.
 - `src/routes/**` — UI pages + form actions. Pages should not import from `node:fs` or `node:path` directly; they go through `$lib/server`.
 

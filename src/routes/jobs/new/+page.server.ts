@@ -1,20 +1,16 @@
 import { error, fail, redirect } from '@sveltejs/kit';
-import { readCouncilWithCouncillors } from '$lib/server/councils';
+import { hasCouncil, readCouncilWithCouncillors } from '$lib/server/councils';
 import { createJob } from '$lib/server/jobs';
 import { startJobInBackground } from '$lib/server/runner';
 import type { Actions, PageServerLoad } from './$types';
 
-export const load: PageServerLoad = async ({ params }) => {
-  try {
-    const council = await readCouncilWithCouncillors(params.slug);
-    return { council };
-  } catch {
-    error(404, 'Council not found');
-  }
+export const load: PageServerLoad = async () => {
+  if (!hasCouncil()) error(404, 'No council in this directory');
+  return { council: await readCouncilWithCouncillors() };
 };
 
 export const actions: Actions = {
-  default: async ({ params, request }) => {
+  default: async ({ request }) => {
     const form = await request.formData();
     const title = String(form.get('title') ?? '').trim();
     const brief = String(form.get('brief') ?? '').trim();
@@ -32,7 +28,7 @@ export const actions: Actions = {
 
     let jobId: string;
     try {
-      const job = await createJob(params.slug, { title, brief, councillor_slug });
+      const job = await createJob({ title, brief, councillor_slug });
       jobId = job.id;
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Failed to create job.';
@@ -40,8 +36,8 @@ export const actions: Actions = {
     }
 
     if (start_now) {
-      startJobInBackground(params.slug, jobId);
+      startJobInBackground(jobId);
     }
-    redirect(303, `/councils/${params.slug}/jobs/${jobId}`);
+    redirect(303, `/jobs/${jobId}`);
   }
 };

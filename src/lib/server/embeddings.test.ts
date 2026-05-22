@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
-import { mkdtempSync, rmSync, writeFileSync } from 'node:fs';
+import { mkdtempSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { env } from 'node:process';
@@ -12,8 +12,6 @@ import type { Embedder } from './embeddings';
 const DIM = 384;
 
 function fakeEmbedder(): Embedder {
-  // Deterministic projection: hash each token into a fixed-dim bag-of-hashes vector.
-  // Same input → same vector; similar inputs → overlapping non-zero positions.
   return {
     dim: DIM,
     embed(texts: string[]): Float32Array[] {
@@ -22,8 +20,7 @@ function fakeEmbedder(): Embedder {
         const tokens = text.toLowerCase().split(/\s+/).filter(Boolean);
         for (const t of tokens) {
           const h = createHash('sha1').update(t).digest();
-          const idx = h.readUInt16BE(0) % DIM;
-          v[idx] += 1;
+          v[h.readUInt16BE(0) % DIM] += 1;
         }
         let norm = 0;
         for (let i = 0; i < DIM; i++) norm += v[i] * v[i];
@@ -39,16 +36,16 @@ let tmpRoot: string;
 let prevEnv: string | undefined;
 
 beforeEach(async () => {
-  prevEnv = env.LANDSRAAD_COUNCILS_ROOT;
+  prevEnv = env.LANDSRAAD_COUNCIL_ROOT;
   tmpRoot = mkdtempSync(join(tmpdir(), 'landsraad-emb-'));
-  env.LANDSRAAD_COUNCILS_ROOT = tmpRoot;
+  env.LANDSRAAD_COUNCIL_ROOT = tmpRoot;
   await createCouncil({ name: 'Emb Test' });
 });
 
 afterEach(() => {
   rmSync(tmpRoot, { recursive: true, force: true });
-  if (prevEnv === undefined) delete env.LANDSRAAD_COUNCILS_ROOT;
-  else env.LANDSRAAD_COUNCILS_ROOT = prevEnv;
+  if (prevEnv === undefined) delete env.LANDSRAAD_COUNCIL_ROOT;
+  else env.LANDSRAAD_COUNCIL_ROOT = prevEnv;
 });
 
 describe('gzipDensity', () => {
@@ -59,8 +56,6 @@ describe('gzipDensity', () => {
   });
 
   it('returns a positive value for non-empty input', () => {
-    // gzip has ~23 bytes of header overhead, so very short strings have density > 1.
-    // For texts of meaningful size, density is in (0, 1].
     const d = gzipDensity('The quick brown fox jumps over the lazy dog'.repeat(10));
     expect(d).toBeGreaterThan(0);
     expect(d).toBeLessThanOrEqual(1);
@@ -73,14 +68,14 @@ describe('gzipDensity', () => {
 
 describe('embeddings index', () => {
   it('opens an index DB inside the council directory', () => {
-    const idx = openIndex('emb-test', fakeEmbedder());
-    expect(idx.path).toContain('emb-test');
+    const idx = openIndex(fakeEmbedder());
+    expect(idx.path).toContain(tmpRoot);
     expect(idx.path).toMatch(/embeddings\.db$/);
     closeIndex(idx);
   });
 
   it('upserts a chunk and finds it via search', () => {
-    const idx = openIndex('emb-test', fakeEmbedder());
+    const idx = openIndex(fakeEmbedder());
     upsertChunk(idx, {
       kind: 'memory',
       ref_id: 'house-rules',
@@ -99,7 +94,7 @@ describe('embeddings index', () => {
   });
 
   it('stores gzip_density and token_count', () => {
-    const idx = openIndex('emb-test', fakeEmbedder());
+    const idx = openIndex(fakeEmbedder());
     upsertChunk(idx, {
       kind: 'memory',
       ref_id: 'n1',
@@ -122,7 +117,7 @@ describe('embeddings index', () => {
         return e.embed(texts);
       }
     };
-    const idx = openIndex('emb-test', counting);
+    const idx = openIndex(counting);
     const args = {
       kind: 'memory' as const,
       ref_id: 'n1',
@@ -146,7 +141,7 @@ describe('embeddings index', () => {
         return e.embed(texts);
       }
     };
-    const idx = openIndex('emb-test', counting);
+    const idx = openIndex(counting);
     upsertChunk(idx, {
       kind: 'memory',
       ref_id: 'n1',
@@ -168,7 +163,7 @@ describe('embeddings index', () => {
   });
 
   it('deletes all chunks for a ref', () => {
-    const idx = openIndex('emb-test', fakeEmbedder());
+    const idx = openIndex(fakeEmbedder());
     upsertChunk(idx, {
       kind: 'memory',
       ref_id: 'doomed',
@@ -183,7 +178,7 @@ describe('embeddings index', () => {
   });
 
   it('filters search by kind', async () => {
-    const idx = openIndex('emb-test', fakeEmbedder());
+    const idx = openIndex(fakeEmbedder());
     upsertChunk(idx, {
       kind: 'memory',
       ref_id: 'm1',
@@ -208,25 +203,8 @@ describe('embeddings index', () => {
     closeIndex(idx);
   });
 
-  it('isolates indices between councils', async () => {
-    await createCouncil({ name: 'Other Council' });
-    const a = openIndex('emb-test', fakeEmbedder());
-    const b = openIndex('other-council', fakeEmbedder());
-    upsertChunk(a, {
-      kind: 'memory',
-      ref_id: 'a1',
-      text: 'unique-token-aaaa',
-      source_path: '/a.md',
-      source_mtime: '2026-05-22T10:00:00Z'
-    });
-    expect(search(a, 'unique-token-aaaa').length).toBe(1);
-    expect(search(b, 'unique-token-aaaa').length).toBe(0);
-    closeIndex(a);
-    closeIndex(b);
-  });
-
   it('filters by min_density', () => {
-    const idx = openIndex('emb-test', fakeEmbedder());
+    const idx = openIndex(fakeEmbedder());
     upsertChunk(idx, {
       kind: 'memory',
       ref_id: 'boilerplate',

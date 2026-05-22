@@ -4,7 +4,7 @@
   const c = $derived(data.council);
 </script>
 
-<p><a href="/councils/{c.slug}">&larr; {c.name}</a></p>
+<p><a href="/">&larr; {c.name}</a></p>
 
 <h1>New job</h1>
 
@@ -12,7 +12,7 @@
 
 {#if c.councillors.length === 0}
   <p class="empty">Add a councillor first.</p>
-  <p><a class="btn primary" href="/councils/{c.slug}/councillors/new">+ New councillor</a></p>
+  <p><a class="btn primary" href="/councillors/new">+ New councillor</a></p>
 {:else}
   <form method="POST" class="stack">
     <label>
@@ -37,7 +37,7 @@
       <span>Start immediately</span>
     </label>
     <div class="actions">
-      <a class="btn" href="/councils/{c.slug}">Cancel</a>
+      <a class="btn" href="/">Cancel</a>
       <button class="btn primary" type="submit">Create job</button>
     </div>
   </form>

@@ -3,11 +3,13 @@ import { closeIndex, deleteByRef, openIndex, searchAsync, upsertChunkAsync } fro
 import type { SearchHit, SearchOptions } from './embeddings';
 
 let _embedder: Embedder | null = null;
-const handles = new Map<string, IndexHandle>();
+let _handle: IndexHandle | null = null;
 
 export function setEmbedder(e: Embedder | null): void {
-  for (const h of handles.values()) closeIndex(h);
-  handles.clear();
+  if (_handle) {
+    closeIndex(_handle);
+    _handle = null;
+  }
   _embedder = e;
 }
 
@@ -16,23 +18,22 @@ export function hasEmbedder(): boolean {
 }
 
 export function closeAll(): void {
-  for (const h of handles.values()) closeIndex(h);
-  handles.clear();
+  if (_handle) {
+    closeIndex(_handle);
+    _handle = null;
+  }
 }
 
-function get(councilSlug: string): IndexHandle | null {
+function get(): IndexHandle | null {
   if (!_embedder) return null;
-  let h = handles.get(councilSlug);
-  if (!h) {
-    try {
-      h = openIndex(councilSlug, _embedder);
-    } catch (err) {
-      console.warn(`[indexer] openIndex(${councilSlug}) failed:`, (err as Error).message);
-      return null;
-    }
-    handles.set(councilSlug, h);
+  if (_handle) return _handle;
+  try {
+    _handle = openIndex(_embedder);
+  } catch (err) {
+    console.warn(`[indexer] openIndex failed:`, (err as Error).message);
+    return null;
   }
-  return h;
+  return _handle;
 }
 
 export interface IndexUpsertArgs {
@@ -45,8 +46,8 @@ export interface IndexUpsertArgs {
   councillor_slug?: string | null;
 }
 
-export async function indexUpsert(councilSlug: string, args: IndexUpsertArgs): Promise<void> {
-  const h = get(councilSlug);
+export async function indexUpsert(args: IndexUpsertArgs): Promise<void> {
+  const h = get();
   if (!h) return;
   if (!args.text || !args.text.trim()) return;
   try {
@@ -56,8 +57,8 @@ export async function indexUpsert(councilSlug: string, args: IndexUpsertArgs): P
   }
 }
 
-export function indexDelete(councilSlug: string, kind: ChunkKind, ref_id: string): void {
-  const h = get(councilSlug);
+export function indexDelete(kind: ChunkKind, ref_id: string): void {
+  const h = get();
   if (!h) return;
   try {
     deleteByRef(h, kind, ref_id);
@@ -66,12 +67,8 @@ export function indexDelete(councilSlug: string, kind: ChunkKind, ref_id: string
   }
 }
 
-export async function indexSearch(
-  councilSlug: string,
-  query: string,
-  opts?: SearchOptions
-): Promise<SearchHit[]> {
-  const h = get(councilSlug);
+export async function indexSearch(query: string, opts?: SearchOptions): Promise<SearchHit[]> {
+  const h = get();
   if (!h) return [];
   try {
     return await searchAsync(h, query, opts);

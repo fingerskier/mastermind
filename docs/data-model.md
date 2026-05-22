@@ -1,20 +1,30 @@
 # Data model
 
-Everything is on-disk under the councils root (default `~/.landsraad/councils/`, override with `LANDSRAAD_COUNCILS_ROOT`).
+Everything is on-disk under the **council root**, which is the Landsraad process's cwd (override with `LANDSRAAD_COUNCIL_ROOT`). One council per directory.
 
 ## Layout
 
 ```
-<councils-root>/
-  <council-slug>/
-    council.json
-    councillors/
-      <councillor-slug>/
-        councillor.json
-        persona.md
+<council-root>/
+  council.json
+  councillors/
+    <councillor-slug>/
+      councillor.json
+      persona.md
+  memory/
+    <note-slug>.md
+  jobs/
+    <job-id>/
+      job.json
+      input.md
+      transcript.md
+      output.md
+      events.jsonl
+  .index/
+    embeddings.db
 ```
 
-Slugs are derived from display names: lowercased, non-alphanumerics collapsed to `-`, capped at 64 chars. They never change after creation — renames update `name` in the JSON file but keep the slug stable.
+Councillor and note slugs are derived from display names: lowercased, non-alphanumerics collapsed to `-`, capped at 64 chars. They never change after creation — renames update `name` in the JSON file but keep the slug stable.
 
 ## `council.json`
 
@@ -54,7 +64,7 @@ The councillor's persona — free-form markdown. The application treats it as op
 
 ## Invariants
 
-- A councillor only exists inside a council; deleting a council deletes its councillors with it.
-- Slugs are unique within their parent scope (council slugs across the councils root, councillor slugs within their council).
-- The app never writes outside the councils root.
+- One council per process. The Landsraad app runs against `cwd` (or `LANDSRAAD_COUNCIL_ROOT`).
+- Councillor and note slugs are unique within the council root.
+- The app never writes outside the council root.
 - Files are written atomically enough for this single-user case (JSON is replaced wholesale on every update); no file locking.

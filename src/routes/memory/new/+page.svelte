@@ -4,7 +4,7 @@
   const c = $derived(data.council);
 </script>
 
-<p><a href="/councils/{c.slug}">&larr; {c.name}</a></p>
+<p><a href="/">&larr; {c.name}</a></p>
 
 <h1>New memory note</h1>
 
@@ -20,7 +20,7 @@
     <textarea name="body" rows="14" placeholder="Notes shared with every councillor when they run a job.">{form?.body ?? ''}</textarea>
   </label>
   <div class="actions">
-    <a class="btn" href="/councils/{c.slug}">Cancel</a>
+    <a class="btn" href="/">Cancel</a>
     <button class="btn primary" type="submit">Save note</button>
   </div>
 </form>

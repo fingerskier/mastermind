@@ -28,9 +28,9 @@ A future SDK embedder (`sdk:openai`, `sdk:cohere`) will conform to the same `Emb
 
 ## Storage Model
 
-Per-council DB at `<council>/.index/embeddings.db`.
+DB lives at `<council-root>/.index/embeddings.db`, where `<council-root>` is the Landsraad process's cwd (or `LANDSRAAD_COUNCIL_ROOT`).
 
-Deleting a council removes its index for free. The directory `.index/` is git-ignored (the index is regenerable).
+Deleting the council (rm `council.json`, `councillors/`, etc. — or removing the whole directory) removes the index with it. `.index/` is git-ignored (the index is regenerable).
 
 ### Schema
 
@@ -79,7 +79,7 @@ Examples:
 | `transcript/2026-05-22T14-30-00Z-q1-summary#0` | `<council>/jobs/.../transcript.md` |
 | `persona/mocky#0` | `<council>/councillors/mocky/persona.md` |
 
-The council slug is implicit: each council owns its own DB. If we ever flip to a global index, prepend the council slug as another column — no logical-key rewrite.
+The council is implicit: each council root owns its own DB. If we ever flip to a global index, prepend a council identifier as another column — no logical-key rewrite.
 
 ### `gzip_density`
 
@@ -109,10 +109,10 @@ Hooks are best-effort: an embedding failure logs but does not abort the user-fac
 ### `npm run reindex`
 
 ```
-npm run reindex -- <council-slug>
+npm run reindex -- <council-root>
 ```
 
-Walks the council's `memory/`, `councillors/*/persona.md`, and `jobs/*/{input,output,transcript}.md`. For each file:
+Walks `<council-root>/memory/`, `<council-root>/councillors/*/persona.md`, and `<council-root>/jobs/*/{input,output,transcript}.md`. For each file:
 
 1. Compute `text_hash`. If a chunk row exists with the same hash, skip.
 2. Otherwise embed, upsert chunk + vector, update `source_mtime`.
@@ -141,7 +141,7 @@ interface SearchOptions {
   min_density?: number;  // skip boilerplate
 }
 
-search(councilSlug: string, query: string, opts?: SearchOptions): Promise<SearchHit[]>
+indexSearch(query: string, opts?: SearchOptions): Promise<SearchHit[]>
 ```
 
 Cosine similarity via `vec_chunks MATCH` (sqlite-vec syntax). Post-filter on `kinds` / `councillor_slug` / `min_density` happens in SQL.

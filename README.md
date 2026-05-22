@@ -1,13 +1,13 @@
 # Landsraad
 
-A local-first AI council chamber. Create councils, configure councillors, and (eventually) put them to work.
+A local-first AI council chamber. Configure councillors, give them jobs, watch the council work.
 
-> Status: **v0 — management surface only.** Agent execution, jobs, memory, and adapters are not implemented yet. See [`SPECIFICATION.md`](./SPECIFICATION.md) for the full scope and what's deliberately out of scope.
+> Status: **v1 — single-council, cwd-rooted.** See [`SPECIFICATION.md`](./SPECIFICATION.md) for the full scope and what's deliberately out of scope.
 
 ## What's here
 
 - A SvelteKit + TypeScript app you run locally.
-- Filesystem persistence — every council is a directory under `~/.landsraad/councils/` (configurable).
+- **One council per directory.** When you run `npx landsraad`, the current working directory **is** the council — `council.json`, `councillors/`, `memory/`, `jobs/`, `.index/` all sit at cwd.
 - No accounts, no cloud, no telemetry. You are the only user. You are also the secretary.
 
 ## Quickstart
@@ -15,29 +15,37 @@ A local-first AI council chamber. Create councils, configure councillors, and (e
 Requires Node.js 20+.
 
 ```bash
-npm install
-npm run dev
+mkdir my-council && cd my-council
+npx landsraad
 ```
 
-Open the URL it prints (usually <http://localhost:5173>).
+Open the URL it prints. The setup form creates `council.json` in the current directory.
 
-### Production-ish run
+### From the repo (development)
 
 ```bash
 npm install
-npm run build
-npm start
+npm run dev   # runs against repo cwd; council files are gitignored
 ```
 
-### `npx landsraad`
+To target a specific directory:
 
-Once published, `npx landsraad` will start the production server. For now the bin script (`bin/landsraad.js`) only works after `npm run build`.
+```bash
+LANDSRAAD_COUNCIL_ROOT=/path/to/council npm run dev
+```
+
+### Seed a dogfood council
+
+```bash
+npm run dogfood:init        # creates ./dogfood
+cd dogfood && npx landsraad # or LANDSRAAD_COUNCIL_ROOT=./dogfood npm run dev
+```
 
 ## Configuration
 
 | Env var | Default | Purpose |
 |---|---|---|
-| `LANDSRAAD_COUNCILS_ROOT` | `~/.landsraad/councils` | Where councils are stored on disk. |
+| `LANDSRAAD_COUNCIL_ROOT` | `process.cwd()` | The directory Landsraad treats as the council root. |
 
 ## Tests
 
@@ -50,14 +58,17 @@ Vitest covers the filesystem layer (`src/lib/server/`).
 ## Project layout
 
 ```
-bin/landsraad.js           # npx entry (runs the built server)
+bin/landsraad.js           # npx entry (runs the built server in cwd)
 src/
   lib/
-    server/                # filesystem-backed councils + councillors
+    server/                # filesystem-backed council layer (paths, councils, councillors, memory, jobs, runner, indexer)
     types.ts               # shared types
-  routes/                  # SvelteKit pages
+  routes/                  # SvelteKit pages — flat: /, /edit, /councillors/*, /memory/*, /jobs/*
+scripts/
+  dogfood-init.ts          # seed a council into ./dogfood (or a custom path)
+  reindex.ts               # rebuild the semantic index for a council root
 SPECIFICATION.md           # what the product is supposed to be
-docs/                      # architecture + data model notes
+docs/                      # architecture + data model + embeddings notes
 ```
 
 ## License

@@ -1,37 +1,30 @@
 <script lang="ts">
-  import { page } from '$app/state';
   import type { ActionData, PageData } from './$types';
   let { data, form }: { data: PageData; form: ActionData } = $props();
-  const c = $derived(data.councillor);
   const adapters = $derived(data.adapters);
-  const councilSlug = $derived(page.params.slug);
-  const initialAdapter = $derived(form?.adapter ?? c.adapter ?? '');
-  const isKnown = $derived(initialAdapter === '' || adapters.some((a) => a.id === initialAdapter));
+  const initialAdapter = $derived(form?.adapter ?? '');
 </script>
 
-<p><a href="/councils/{councilSlug}/councillors/{c.slug}">&larr; {c.name}</a></p>
-<h1>Edit councillor</h1>
+<p><a href="/">&larr; Back to council</a></p>
+<h1>New councillor</h1>
 
 <form method="POST" class="form">
   {#if form?.error}<div class="error">{form.error}</div>{/if}
 
   <label>
     <span>Name</span>
-    <input name="name" required maxlength="80" value={form?.name ?? c.name} />
+    <input name="name" required maxlength="80" value={form?.name ?? ''} />
   </label>
 
   <label>
     <span>Role</span>
-    <input name="role" required maxlength="80" value={form?.role ?? c.role} />
+    <input name="role" required maxlength="80" value={form?.role ?? ''} placeholder="e.g. CFO, Macro Strategist" />
   </label>
 
   <label>
     <span>Adapter <em>(optional)</em></span>
     <select name="adapter">
       <option value="" selected={initialAdapter === ''}>— none (set later) —</option>
-      {#if !isKnown}
-        <option value={initialAdapter} selected>{initialAdapter} (custom)</option>
-      {/if}
       {#each adapters as a (a.id)}
         <option value={a.id} selected={a.id === initialAdapter} disabled={!a.available}>
           {a.label}{a.available ? '' : ' — unavailable'}
@@ -42,12 +35,12 @@
 
   <label>
     <span>Persona <em>(markdown)</em></span>
-    <textarea name="persona" rows="14">{form?.persona ?? c.persona}</textarea>
+    <textarea name="persona" rows="10">{form?.persona ?? ''}</textarea>
   </label>
 
   <div class="actions">
-    <button type="submit" class="btn primary">Save</button>
-    <a href="/councils/{councilSlug}/councillors/{c.slug}" class="btn">Cancel</a>
+    <button type="submit" class="btn primary">Create councillor</button>
+    <a href="/" class="btn">Cancel</a>
   </div>
 </form>
 

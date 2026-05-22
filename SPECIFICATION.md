@@ -4,7 +4,9 @@ Status: v1 (council + councillor + jobs + memory + adapters + activity dashboard
 
 ## What it is
 
-Landsraad is a local-first, single-directory **council chamber** for AI agents. A council is a group of agents working with a human director (you). The app is an `npx`-launchable Node.js + TypeScript application (SvelteKit) that lets the director create councils, configure councillors, **assign jobs to them, keep shared memory, and watch the council work**.
+Landsraad is a local-first **council chamber** for AI agents. A council is a group of agents working with a human director (you). The app is an `npx`-launchable Node.js + TypeScript application (SvelteKit) that lets the director configure councillors, **assign jobs to them, keep shared memory, and watch the council work**.
+
+**One council per working directory.** When you run `npx landsraad`, the current working directory **is** the council root — `council.json`, `councillors/`, `memory/`, `jobs/`, and `.index/` all sit at cwd. There is no multi-council list, no global councils root. Want more than one council? Use more than one directory.
 
 ## Non-goals (still)
 
@@ -37,7 +39,7 @@ The human user. The director creates councils, configures councillors, writes jo
 
 ### Council
 
-A configured group of councillors plus the per-council state that supports them: jobs, shared memory, run artifacts. Each council lives in its own directory on disk; the director can have many councils.
+A configured group of councillors plus the state that supports them: jobs, shared memory, run artifacts. A council **is** a directory on disk. The Landsraad app, when launched, operates against the council at its current working directory.
 
 ### Councillor
 
@@ -80,43 +82,46 @@ A reusable, shareable definition of a council type — councillor roles, persona
 
 ### Dogfood Council
 
-A built-in council for testing Landsraad itself. The CLI command `npm run dogfood:init` (and the equivalent `landsraad dogfood-init` once installed) seeds `~/.landsraad/councils/dogfood` with two `mock:local` councillors, one shared memory note, and one sample job. This is the council the director uses to exercise the app without burning real-CLI tokens.
+A built-in council for testing Landsraad itself. The CLI command `npm run dogfood:init [path]` seeds the target directory (default `./dogfood`) with two `mock:local` councillors, one shared memory note, and one sample job. From there, `cd dogfood && npx landsraad` (or `LANDSRAAD_COUNCIL_ROOT=./dogfood npm run dev` from the repo) operates against it. This is what the director uses to exercise the app without burning real-CLI tokens.
 
 ## v1 Functionality
 
-1. **Launch the app.** `npm run dev` from the repo (eventually `npx landsraad`).
-2. **Manage councils.** Create, view, edit, delete. List on `/`.
-3. **Manage councillors.** Inside a council. Same CRUD, plus the adapter string.
-4. **Manage shared memory.** Inside a council. CRUD on `*.md` notes.
-5. **Create and run jobs.** Inside a council: pick a councillor, write a brief, submit. The runner picks up queued jobs and invokes the councillor's adapter. Status updates land on disk; the UI polls for live updates while a job is running.
-6. **Activity view.** The council page shows each councillor's current job (or "idle"), plus a list of recent jobs with status badges and timestamps.
+1. **Launch the app.** `npx landsraad` from the council directory (or `npm run dev` from the repo for development).
+2. **Create or edit the council.** If `council.json` is missing, `/` shows a setup form. Otherwise it's the council home.
+3. **Manage councillors.** CRUD on a councillor's name, role, persona, and adapter string.
+4. **Manage shared memory.** CRUD on `*.md` notes under `memory/`.
+5. **Create and run jobs.** Pick a councillor, write a brief, submit. The runner picks up queued jobs and invokes the councillor's adapter. Status updates land on disk; the UI polls for live updates while a job is running.
+6. **Activity view.** The council page shows each councillor's recent jobs with status badges and timestamps.
 7. **Per-job artifacts.** Each run leaves `input.md` (the assembled prompt), `transcript.md` (raw adapter output), `output.md` (final response or summary), `events.jsonl` (state transitions), and `job.json` (metadata).
-8. **Seed a dogfood council.** `npm run dogfood:init`.
+8. **Seed a dogfood council.** `npm run dogfood:init [path]`.
 
 ## Storage Model
 
+The council root is the current working directory of the Landsraad process. Override with `LANDSRAAD_COUNCIL_ROOT=<path>` for tests or to point a dev server at a non-cwd council.
+
 ```
-<councils-root>/
-  <council-slug>/
-    council.json
-    councillors/
-      <councillor-slug>/
-        councillor.json          # name, role, adapter, created_at
-        persona.md
-    memory/
-      <note-slug>.md             # shared notes
-    jobs/
-      <job-id>/                  # job-id is timestamped + slugged
-        job.json                 # id, title, brief_path, councillor_slug, status, *_at fields, exit_code?
-        input.md                 # assembled prompt sent to the adapter
-        transcript.md            # raw stdout (and stderr) from the adapter
-        output.md                # final response (often === transcript.md, possibly trimmed)
-        events.jsonl             # one line per state transition or progress event
+<council-root>/                  # = process.cwd() (or LANDSRAAD_COUNCIL_ROOT)
+  council.json
+  councillors/
+    <councillor-slug>/
+      councillor.json            # name, role, adapter, created_at
+      persona.md
+  memory/
+    <note-slug>.md               # shared notes
+  jobs/
+    <job-id>/                    # job-id is timestamped + slugged
+      job.json                   # id, title, councillor_slug, status, *_at fields, exit_code?
+      input.md                   # assembled prompt sent to the adapter
+      transcript.md              # raw stdout (and stderr) from the adapter
+      output.md                  # final response (often === transcript.md, possibly trimmed)
+      events.jsonl               # one line per state transition or progress event
+  .index/
+    embeddings.db                # sqlite-vec index; regenerable
 ```
 
-Job IDs are `<UTC-timestamp>-<title-slug>` (e.g. `2026-05-21T14-30-00Z-q1-summary`) — sortable, human-readable, unique enough for one-director scale.
+Job IDs are `<UTC-timestamp>-<title-slug>` (e.g. `2026-05-22T14-30-00Z-q1-summary`) — sortable, human-readable, unique enough for one-director scale.
 
-The app never writes outside `<councils-root>`. It never writes secrets to disk. Subprocess environment is inherited unchanged.
+The app never writes outside the council root. It never writes secrets to disk. Subprocess environment is inherited unchanged.
 
 ## Runner semantics (v1)
 
@@ -130,19 +135,17 @@ The app never writes outside `<councils-root>`. It never writes secrets to disk.
 
 | Route | Purpose |
 |---|---|
-| `/` | Council list |
-| `/councils/new` | Create council |
-| `/councils/[slug]` | Council home: metadata · councillors · activity · jobs · memory |
-| `/councils/[slug]/edit` | Edit council |
-| `/councils/[slug]/councillors/new` | Add councillor |
-| `/councils/[slug]/councillors/[c-slug]` | View councillor + their jobs |
-| `/councils/[slug]/councillors/[c-slug]/edit` | Edit councillor |
-| `/councils/[slug]/memory/new` | Add memory note |
-| `/councils/[slug]/memory/[note]` | View / edit memory note |
-| `/councils/[slug]/jobs/new` | Create job |
-| `/councils/[slug]/jobs/[jid]` | Job detail: brief, transcript, output, status. Auto-refreshes while `running`. |
+| `/` | Setup form (no `council.json`) or council home (metadata · councillors · activity · jobs · memory) |
+| `/edit` | Edit council |
+| `/councillors/new` | Add councillor |
+| `/councillors/[c-slug]` | View councillor + their jobs |
+| `/councillors/[c-slug]/edit` | Edit councillor |
+| `/memory/new` | Add memory note |
+| `/memory/[note]` | View / edit memory note |
+| `/jobs/new` | Create job |
+| `/jobs/[jid]` | Job detail: brief, transcript, output, status. Auto-refreshes while `running`. |
 
-A persistent header links back to `/`; the council page is the working surface.
+A persistent header links back to `/`; the council home is the working surface.
 
 ## Out of Scope (will be specified later)
 

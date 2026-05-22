@@ -4,7 +4,7 @@
   const c = $derived(data.council);
 </script>
 
-<p><a href="/councils/{c.slug}">&larr; {c.name}</a></p>
+<p><a href="/">&larr; {c.name}</a></p>
 <h1>Edit council</h1>
 
 <form method="POST" class="form">
@@ -27,7 +27,7 @@
 
   <div class="actions">
     <button type="submit" class="btn primary">Save</button>
-    <a href="/councils/{c.slug}" class="btn">Cancel</a>
+    <a href="/" class="btn">Cancel</a>
   </div>
 </form>
 

@@ -5,7 +5,7 @@
   const note = $derived(data.note);
 </script>
 
-<p><a href="/councils/{c.slug}">&larr; {c.name}</a></p>
+<p><a href="/">&larr; {c.name}</a></p>
 
 <header class="head">
   <div>
@@ -23,7 +23,7 @@
 <form method="POST" action="?/save" class="stack">
   <textarea name="body" rows="20">{note.body}</textarea>
   <div class="actions">
-    <a class="btn" href="/councils/{c.slug}">Back</a>
+    <a class="btn" href="/">Back</a>
     <button class="btn primary" type="submit">Save</button>
   </div>
 </form>

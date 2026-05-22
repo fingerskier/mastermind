@@ -1,16 +1,14 @@
 <script lang="ts">
-  import { page } from '$app/state';
   import type { ActionData, PageData } from './$types';
   let { data, form }: { data: PageData; form: ActionData } = $props();
   const c = $derived(data.councillor);
   const adapters = $derived(data.adapters);
-  const councilSlug = $derived(page.params.slug);
   const currentAdapter = $derived(c.adapter ?? '');
   const isKnown = $derived(currentAdapter === '' || adapters.some((a) => a.id === currentAdapter));
   const currentNote = $derived(adapters.find((a) => a.id === currentAdapter)?.note ?? '');
 </script>
 
-<p><a href="/councils/{councilSlug}">&larr; Back to council</a></p>
+<p><a href="/">&larr; Back to council</a></p>
 
 <header class="head">
   <div>
@@ -21,7 +19,7 @@
     </p>
   </div>
   <div class="head-actions">
-    <a class="btn" href="/councils/{councilSlug}/councillors/{c.slug}/edit">Edit</a>
+    <a class="btn" href="/councillors/{c.slug}/edit">Edit</a>
     <form method="POST" action="?/delete" onsubmit={(e) => { if (!confirm(`Delete councillor "${c.name}"?`)) e.preventDefault(); }}>
       <button class="btn danger" type="submit">Delete</button>
     </form>
