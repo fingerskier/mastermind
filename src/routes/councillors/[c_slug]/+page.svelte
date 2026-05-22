@@ -3,6 +3,7 @@
   let { data, form }: { data: PageData; form: ActionData } = $props();
   const c = $derived(data.councillor);
   const adapters = $derived(data.adapters);
+  const memories = $derived(data.memories);
   const currentAdapter = $derived(c.adapter ?? '');
   const isKnown = $derived(currentAdapter === '' || adapters.some((a) => a.id === currentAdapter));
   const currentNote = $derived(adapters.find((a) => a.id === currentAdapter)?.note ?? '');
@@ -59,6 +60,24 @@
   {/if}
 </section>
 
+<section>
+  <h2>Memory</h2>
+  {#if memories.length === 0}
+    <p class="empty">No memories yet. They accrue automatically after successful jobs.</p>
+  {:else}
+    <ul class="mem-list">
+      {#each memories as m (m.slug)}
+        <li>
+          <a class="mem-card" href="/councillors/{c.slug}/memory/{m.slug}">
+            <div class="mem-title">{m.title}</div>
+            <div class="mem-meta">Updated {new Date(m.updated_at).toLocaleString()}</div>
+          </a>
+        </li>
+      {/each}
+    </ul>
+  {/if}
+</section>
+
 <style>
   h1 { margin: 0; }
   .meta { color: var(--muted); margin: 0.5rem 0 0; font-size: 0.9em; }
@@ -91,4 +110,9 @@
   .btn { display: inline-block; padding: 0.5rem 0.9rem; border-radius: 6px; border: 1px solid var(--border); text-decoration: none; color: var(--fg); background: transparent; cursor: pointer; }
   .btn.primary { background: var(--accent); color: #0f1115; border-color: var(--accent); font-weight: 600; }
   .btn.danger { border-color: var(--danger); color: var(--danger); }
+  .mem-list { list-style: none; padding: 0; display: grid; gap: 0.6rem; }
+  .mem-card { display: block; border: 1px solid var(--border); border-radius: 6px; padding: 0.6rem 0.8rem; text-decoration: none; color: var(--fg); }
+  .mem-card:hover { border-color: var(--accent); }
+  .mem-title { font-weight: 500; }
+  .mem-meta { color: var(--muted); font-size: 0.8em; margin-top: 0.2rem; }
 </style>
