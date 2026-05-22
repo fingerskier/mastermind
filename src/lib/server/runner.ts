@@ -7,11 +7,16 @@ import {
   currentJobForCouncillor,
   readInput,
   readJob,
+  readOutput,
+  readTranscript,
   setStatus,
   writeInput,
+  writeJob,
   writeOutput
 } from './jobs';
 import { resolveAdapter, type ResolvedAdapter } from './adapters';
+import { buildReflectionPrompt, parseMemoryBlocks } from './reflection';
+import { createPrivateNote } from './memory_private';
 import type { Job } from '$lib/types';
 
 interface ActiveRun {
@@ -45,6 +50,70 @@ export async function cancelJob(jobId: string): Promise<void> {
 
 export interface RunOptions {
   adapterOverride?: ResolvedAdapter;
+}
+
+async function reflectAfterSuccess(
+  job: Job,
+  councillor: { slug: string; reflect: boolean },
+  adapter: ResolvedAdapter,
+  signal: AbortSignal
+): Promise<void> {
+  if (!councillor.reflect) return;
+  const transcript = await readTranscript(job.id).catch(() => '');
+  const output = await readOutput(job.id).catch(() => '');
+  const prompt = buildReflectionPrompt({
+    title: job.title,
+    brief: job.brief,
+    transcript,
+    output
+  });
+
+  let reflectionOut = '';
+  try {
+    const streams = adapter.run({ prompt, cwd: councilRoot(), signal });
+    for await (const _chunk of streams.chunks) void _chunk;
+    const result = await streams.result;
+    if (result.exit_code !== 0) {
+      await appendEvent(job.id, {
+        at: new Date().toISOString(),
+        type: 'reflection_failed',
+        message: result.stderr || `exit ${result.exit_code}`
+      });
+      return;
+    }
+    reflectionOut = result.stdout;
+  } catch (err) {
+    await appendEvent(job.id, {
+      at: new Date().toISOString(),
+      type: 'reflection_failed',
+      message: err instanceof Error ? err.message : String(err)
+    });
+    return;
+  }
+
+  const blocks = parseMemoryBlocks(reflectionOut);
+  const slugs: string[] = [];
+  for (const b of blocks) {
+    try {
+      const note = await createPrivateNote(councillor.slug, { title: b.title, body: b.body });
+      slugs.push(note.slug);
+    } catch (err) {
+      await appendEvent(job.id, {
+        at: new Date().toISOString(),
+        type: 'reflection_failed',
+        message: `note "${b.title}" failed: ${err instanceof Error ? err.message : String(err)}`
+      });
+    }
+  }
+
+  await appendEvent(job.id, {
+    at: new Date().toISOString(),
+    type: 'reflected',
+    message: `wrote ${slugs.length} memor${slugs.length === 1 ? 'y' : 'ies'}`
+  });
+
+  const persisted = await readJob(job.id);
+  await writeJob({ ...persisted, memory_slugs: slugs });
 }
 
 async function buildPrompt(job: Job, personaBody: string): Promise<string> {
@@ -115,10 +184,20 @@ export async function runJobNow(jobId: string, opts: RunOptions = {}): Promise<J
       }
 
       if (result.exit_code === 0) {
-        return await setStatus(jobId, 'succeeded', {
+        const succeeded = await setStatus(jobId, 'succeeded', {
           finished_at: new Date().toISOString(),
           exit_code: 0
         });
+        try {
+          await reflectAfterSuccess(succeeded, councillor, adapter, controller.signal);
+        } catch (err) {
+          await appendEvent(jobId, {
+            at: new Date().toISOString(),
+            type: 'reflection_failed',
+            message: err instanceof Error ? err.message : String(err)
+          });
+        }
+        return await readJob(jobId);
       }
       return await setStatus(jobId, 'failed', {
         finished_at: new Date().toISOString(),

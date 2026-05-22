@@ -7,9 +7,11 @@ import { env } from 'node:process';
 import { createCouncil } from './councils';
 import { createCouncillor } from './councillors';
 import { createNote } from './memory';
-import { createJob, readJob, readOutput, readTranscript, readInput } from './jobs';
+import { createJob, readEvents, readJob, readOutput, readTranscript, readInput } from './jobs';
 import { cancelJob, currentRuns, runJobNow } from './runner';
 import { createMockAdapter } from './adapters';
+import type { AdapterRunStreams } from './adapters';
+import { listPrivateNotes } from './memory_private';
 
 let tmpRoot: string;
 let prevEnv: string | undefined;
@@ -116,5 +118,100 @@ describe('runner', () => {
     expect(runs.some((r) => r.jobId === j.id)).toBe(true);
     await p;
     expect(currentRuns().some((r) => r.jobId === j.id)).toBe(false);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Reflection tests
+// ---------------------------------------------------------------------------
+
+function makeReflectionAdapter(reflectionOutput: string) {
+  let call = 0;
+  const run = (_args: { prompt: string; cwd: string; signal?: AbortSignal }): AdapterRunStreams => {
+    call++;
+    const stdout = call === 1 ? 'job output body' : reflectionOutput;
+    async function* chunks() {
+      yield { stream: 'stdout' as const, text: stdout };
+    }
+    return {
+      chunks: chunks(),
+      result: Promise.resolve({ exit_code: 0, stdout, stderr: '' })
+    };
+  };
+  return { id: 'mock:reflect', kind: 'mock' as const, run };
+}
+
+function makeFailingAdapter() {
+  const run = (_args: { prompt: string; cwd: string; signal?: AbortSignal }): AdapterRunStreams => {
+    async function* chunks() {
+      yield { stream: 'stderr' as const, text: 'boom' };
+    }
+    return {
+      chunks: chunks(),
+      result: Promise.resolve({ exit_code: 1, stdout: '', stderr: 'boom' })
+    };
+  };
+  return { id: 'mock:bad', kind: 'mock' as const, run };
+}
+
+describe('runner reflection', () => {
+  let tmpRoot: string;
+  let prevEnv: string | undefined;
+
+  beforeEach(async () => {
+    prevEnv = env.LANDSRAAD_COUNCIL_ROOT;
+    tmpRoot = mkdtempSync(join(tmpdir(), 'landsraad-reflect-'));
+    env.LANDSRAAD_COUNCIL_ROOT = tmpRoot;
+    await createCouncil({ name: 'Reflect Test' });
+    await createCouncillor({ name: 'Alice', role: 'cto' });
+  });
+
+  afterEach(() => {
+    rmSync(tmpRoot, { recursive: true, force: true });
+    if (prevEnv === undefined) delete env.LANDSRAAD_COUNCIL_ROOT;
+    else env.LANDSRAAD_COUNCIL_ROOT = prevEnv;
+  });
+
+  it('writes private memories from reflection output on success', async () => {
+    const reflection = '<<MEMORY title="Lesson From Run">>\nAlways check exit code first.\n<</MEMORY>>';
+    const adapterOverride = makeReflectionAdapter(reflection);
+    const job = await createJob({ title: 'Probe', brief: 'do thing', councillor_slug: 'alice' });
+    await runJobNow(job.id, { adapterOverride });
+    const finished = await readJob(job.id);
+    expect(finished.status).toBe('succeeded');
+    expect(finished.memory_slugs).toEqual(['lesson-from-run']);
+    const notes = await listPrivateNotes('alice');
+    expect(notes.map((n) => n.slug)).toEqual(['lesson-from-run']);
+    const events = await readEvents(job.id);
+    expect(events.some((e) => e.type === 'reflected')).toBe(true);
+  });
+
+  it('skips reflection when councillor.reflect=false', async () => {
+    const { updateCouncillor } = await import('./councillors');
+    await updateCouncillor('alice', { reflect: false });
+    const reflection = '<<MEMORY title="Skip Me">>\nbody\n<</MEMORY>>';
+    const adapterOverride = makeReflectionAdapter(reflection);
+    const job = await createJob({ title: 'P', brief: 'b', councillor_slug: 'alice' });
+    await runJobNow(job.id, { adapterOverride });
+    expect(await listPrivateNotes('alice')).toEqual([]);
+  });
+
+  it('keeps job succeeded with zero memories when reflection output has no blocks', async () => {
+    const adapterOverride = makeReflectionAdapter('no memory blocks here, just plain text');
+    const job = await createJob({ title: 'P2', brief: 'b2', councillor_slug: 'alice' });
+    await runJobNow(job.id, { adapterOverride });
+    const finished = await readJob(job.id);
+    expect(finished.status).toBe('succeeded');
+    expect(finished.memory_slugs ?? []).toEqual([]);
+    expect(await listPrivateNotes('alice')).toEqual([]);
+  });
+
+  it('does not reflect on failed jobs', async () => {
+    const adapterOverride = makeFailingAdapter();
+    const job = await createJob({ title: 'Bad', brief: 'b', councillor_slug: 'alice' });
+    await runJobNow(job.id, { adapterOverride });
+    const finished = await readJob(job.id);
+    expect(finished.status).toBe('failed');
+    expect(await listPrivateNotes('alice')).toEqual([]);
   });
 });
