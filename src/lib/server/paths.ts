@@ -57,3 +57,11 @@ export function jobIdFor(title: string, now: Date = new Date()): string {
   const titleSlug = slugify(title);
   return `${ts}-${titleSlug}`;
 }
+
+export function proposalsDir(): string {
+  return join(councilRoot(), 'proposals');
+}
+
+export function jobProposalsDir(): string {
+  return join(proposalsDir(), 'jobs');
+}

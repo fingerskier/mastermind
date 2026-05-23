@@ -49,8 +49,28 @@ export interface JobEvent {
     | 'cancelled'
     | 'note'
     | 'reflected'
-    | 'reflection_failed';
+    | 'reflection_failed'
+    | 'proposed_job';
   message?: string;
+}
+
+export type JobProposalStatus = 'pending' | 'approved' | 'rejected';
+
+export interface JobProposal {
+  id: string;
+  kind: 'job';
+  proposed_by: string;
+  source_job_id: string;
+  title: string;
+  brief: string;
+  target_councillor: string | null;
+  priority: 'low' | 'normal' | 'high';
+  status: JobProposalStatus;
+  created_at: string;
+  decided_at?: string;
+  decided_by?: 'user';
+  reason?: string;
+  resulting_job_ids?: string[];
 }
 
 export interface MemoryNote {
