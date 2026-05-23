@@ -17,17 +17,18 @@ export const actions: Actions = {
     const form = await request.formData();
     const name = String(form.get('name') ?? '').trim();
     const role = String(form.get('role') ?? '').trim();
+    const routing_hint = String(form.get('routing_hint') ?? '').trim();
     const adapter = String(form.get('adapter') ?? '').trim();
     const persona = String(form.get('persona') ?? '');
 
-    if (!name) return fail(400, { name, role, adapter, persona, error: 'Name is required.' });
-    if (!role) return fail(400, { name, role, adapter, persona, error: 'Role is required.' });
+    if (!name) return fail(400, { name, role, routing_hint, adapter, persona, error: 'Name is required.' });
+    if (!role) return fail(400, { name, role, routing_hint, adapter, persona, error: 'Role is required.' });
 
     try {
-      await updateCouncillor(params.c_slug, { name, role, adapter, persona });
+      await updateCouncillor(params.c_slug, { name, role, routing_hint, adapter, persona });
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Failed to update councillor.';
-      return fail(400, { name, role, adapter, persona, error: message });
+      return fail(400, { name, role, routing_hint, adapter, persona, error: message });
     }
     redirect(303, `/councillors/${params.c_slug}`);
   }

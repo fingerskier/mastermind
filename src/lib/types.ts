@@ -10,6 +10,7 @@ export interface Councillor {
   slug: string;
   name: string;
   role: string;
+  routing_hint: string;
   adapter: string;
   persona: string;
   reflect: boolean;

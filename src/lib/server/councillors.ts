@@ -12,6 +12,7 @@ const PERSONA_FILE = 'persona.md';
 export interface NewCouncillorInput {
   name: string;
   role: string;
+  routing_hint?: string;
   adapter?: string;
   persona?: string;
   reflect?: boolean;
@@ -20,6 +21,7 @@ export interface NewCouncillorInput {
 export interface UpdateCouncillorInput {
   name?: string;
   role?: string;
+  routing_hint?: string;
   adapter?: string;
   persona?: string;
   reflect?: boolean;
@@ -29,6 +31,7 @@ interface CouncillorMeta {
   slug: string;
   name: string;
   role: string;
+  routing_hint?: string;
   adapter: string;
   reflect?: boolean;
   created_at: string;
@@ -53,7 +56,13 @@ export async function readCouncillor(slug: string): Promise<Councillor> {
   const metaRaw = await readFile(join(dir, COUNCILLOR_FILE), 'utf8');
   const meta = JSON.parse(metaRaw) as CouncillorMeta;
   const persona = await readFile(join(dir, PERSONA_FILE), 'utf8').catch(() => '');
-  return { ...meta, slug, persona, reflect: meta.reflect ?? true };
+  return {
+    ...meta,
+    slug,
+    persona,
+    reflect: meta.reflect ?? true,
+    routing_hint: meta.routing_hint ?? ''
+  };
 }
 
 export async function createCouncillor(input: NewCouncillorInput): Promise<Councillor> {
@@ -66,6 +75,7 @@ export async function createCouncillor(input: NewCouncillorInput): Promise<Counc
     slug,
     name: input.name.trim(),
     role: input.role.trim(),
+    routing_hint: (input.routing_hint ?? '').trim(),
     adapter: (input.adapter ?? '').trim(),
     reflect: input.reflect ?? true,
     created_at: new Date().toISOString()
@@ -86,7 +96,7 @@ export async function createCouncillor(input: NewCouncillorInput): Promise<Counc
       councillor_slug: slug
     });
   }
-  return { ...meta, persona, reflect: meta.reflect ?? true };
+  return { ...meta, persona, reflect: meta.reflect ?? true, routing_hint: meta.routing_hint ?? '' };
 }
 
 export async function updateCouncillor(
@@ -98,6 +108,7 @@ export async function updateCouncillor(
     slug: current.slug,
     name: input.name?.trim() ?? current.name,
     role: input.role?.trim() ?? current.role,
+    routing_hint: input.routing_hint?.trim() ?? current.routing_hint,
     adapter: input.adapter?.trim() ?? current.adapter,
     reflect: input.reflect ?? current.reflect,
     created_at: current.created_at
@@ -119,7 +130,7 @@ export async function updateCouncillor(
   } else {
     indexDelete('persona', slug);
   }
-  return { ...meta, persona, reflect: meta.reflect ?? true };
+  return { ...meta, persona, reflect: meta.reflect ?? true, routing_hint: meta.routing_hint ?? '' };
 }
 
 export async function deleteCouncillor(slug: string): Promise<void> {

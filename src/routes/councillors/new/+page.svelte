@@ -22,6 +22,11 @@
   </label>
 
   <label>
+    <span>Routing hint <em>(optional)</em></span>
+    <input name="routing_hint" maxlength="160" value={form?.routing_hint ?? ''} placeholder="e.g. SvelteKit code + parser internals" />
+  </label>
+
+  <label>
     <span>Adapter <em>(optional)</em></span>
     <select name="adapter">
       <option value="" selected={initialAdapter === ''}>— none (set later) —</option>
