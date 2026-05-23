@@ -2,20 +2,26 @@
 
 Status: v1 (council + councillor + jobs + memory + adapters + activity dashboard). High-level only. Implementation details live in `docs/` and in code.
 
+---
+
 ## What it is
 
-Landsraad is a local-first **council chamber** for AI agents. A council is a group of agents working with a human director (you). The app is an `npx`-launchable Node.js + TypeScript application (SvelteKit) that lets the director configure councillors, **assign jobs to them, keep shared memory, and watch the council work**.
+Landsraad is a local-first **council** of AI agents working toward a common goal.
+A council is a group of agents working with a human director (you).
+The app is an `npx`-launchable Node.js + TypeScript application (SvelteKit) that lets the director configure councillors, **assign jobs to them, keep shared memory, and watch the council work**.
 
-**One council per working directory.** When you run `npx landsraad`, the current working directory **is** the council root — `council.json`, `councillors/`, `memory/`, `jobs/`, and `.index/` all sit at cwd. There is no multi-council list, no global councils root. Want more than one council? Use more than one directory.
+**One council per working directory.** When you run `npx landsraad`, the current working directory **is** the council root — `council.json`, `councillors/`, `memory/`, `jobs/`, and `.index/` all sit at _cwd_.
+Want more than one council?
+Use more than one directory.
 
-## Non-goals (still)
+---
 
-- No "Secretary" singleton agent. The director **is** the secretary.
-- No multi-user, no auth, no remote hosting. One operator, one machine.
-- No provider-native SDK code yet. v1 invokes adapters as **subprocesses** (CLI tools). SDK adapters land in a future spec.
-- ~~No retrieval index, no embeddings.~~ Retrieval index landing in v2 (see `docs/embeddings.md`): per-council libsql + sqlite-vec, on-write hooks, `npm run reindex` for backfill. Memory still lives as plain markdown — the index is regenerable cache.
-- No cron / recurring jobs. v1 jobs are one-shot.
+## TBD
+- No provider-native SDK code yet.  v1 invokes adapters as **subprocesses** (CLI tools).  SDK adapters land in a future spec.
+- cron / recurring jobs.  v1 jobs are one-shot.
 - No remote provider permission/auth orchestration. If a CLI needs login, the user logs in once outside Landsraad.
+
+---
 
 ## Target Users
 
@@ -31,11 +37,15 @@ A team that wants repeatable AI-assisted workflows for operations, research, rep
 
 A user comfortable editing markdown, JSON, and CSV files who wants a transparent local system instead of a black-box hosted agent product.
 
+---
+
 ## Core Concepts
 
 ### Director
 
-The human user. The director creates councils, configures councillors, writes jobs, reviews outputs, edits shared memory, and handles real-world execution. The director also performs all coordination work — there is no secretary agent.
+The human user.
+The director creates councils, configures councillors, writes jobs, reviews outputs, edits shared memory, and handles real-world execution.
+The director also performs all coordination work — there is no secretary agent.
 
 ### Council
 

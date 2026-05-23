@@ -22,6 +22,7 @@ Two-tier model:
 
 A councillor's prompt is assembled from: persona → shared memory (top-K) → private memory (top-K) → brief.
 
+
 ## Architecture
 
 ### Storage layout
@@ -158,4 +159,6 @@ The runner currently calls `assembleMemoryContext()` once per job before invokin
 
 ## Out-of-scope follow-ups captured
 
-- Per-councillor column "+" button on the home page (create job pre-assigned to that councillor) and renaming the section-head "+ New job" to "+ Create job for all". Pure UI tweak — not blocked by this design; can land independently.
+- Per-councillor column "+" button on the home page (create job pre-assigned to that councillor) and renaming the section-head "+ New job" to "+ Create job for all".  Pure UI tweak — not blocked by this design; can land independently.
+- Reindex CLI extension: the spec notes the existing reindex script needs to walk
+  per-councillor memory dirs too — small follow-up.
