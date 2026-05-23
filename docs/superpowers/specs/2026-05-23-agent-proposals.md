@@ -4,6 +4,7 @@
 **Status:** Draft
 **Extends:** `2026-05-22-councillor-memories-design.md` (reflection + `<<MEMORY>>` format)
 
+
 ## Motivation
 
 Reflection already lets a councillor emit `<<MEMORY>>` blocks that the host
@@ -20,14 +21,15 @@ queue the user approves before anything is created or promoted. This keeps
 the existing "agent output is trusted text, not trusted action" invariant
 intact.
 
+
 ## Output channel
 
-All agent → host signals use the same fenced-block envelope already in use
-for `<<MEMORY>>`. Parsing is regex-tolerant of leading whitespace and trailing
-prose. Any unrecognized block tag is ignored (forward-compat).
+All agent → host signals use the same fenced-block envelope already in use for `<<MEMORY>>`.
+Parsing is regex-tolerant of leading whitespace and trailing prose.
+Any unrecognized block tag is ignored (forward-compat).
 
-Blocks may appear in reflection output today; later, in any adapter response
-slot the host chooses to scan (job output, mid-job tool-style messages).
+Blocks may appear in reflection output today; later, in any adapter response slot the host chooses to scan (job output, mid-job tool-style messages).
+
 
 ## `<<JOB>>` — job proposal
 
@@ -40,7 +42,6 @@ brief markdown — what the job should accomplish and why
 ```
 
 Attributes:
-
 - `title` (required) — slugified for the proposal record id.
 - `councillor` (optional) — slug of the target councillor. Omit for
   "unassigned / user decides", or `councillor="all"` for a broadcast
@@ -98,9 +99,34 @@ collisions without needing a registry file.
   review-queue gate breaks the loop; no automated cap needed in v1.
 - **Bad target slug** — proposal still stored; review UI flags unknown
   councillor slug and offers reassignment before approval.
-- **Cross-councillor awareness** — the proposing councillor doesn't see the
-  roster of other councillors in v1. If `target_councillor` is set to a
-  non-existent slug, treat as "unassigned" with a warning chip.
+- **Cross-councillor awareness** — see [Roster injection](#roster-injection)
+  below. If `target_councillor` is still set to a non-existent slug
+  (typo, stale persona), treat as "unassigned" with a warning chip in
+  the review UI.
+
+## Roster injection
+
+To make `<<JOB councillor="...">>` routing land on real slugs, the
+prompt-assembly step injects a terse roster of all current councillors.
+
+- Source: `listCouncillors()` (already exists, reads `councillor.json` per
+  councillor dir).
+- Format: one line per councillor — `<slug> — <name> — <role>`.
+- Inject as a new section in `assembleContextFor` between the persona and
+  the shared/private memory sections:
+  ```
+  # Council roster
+  <slug> — <name> — <role>
+  ...
+  ```
+- Self entry is included (no special-case filtering).
+- Empty council (only one councillor) still emits the header so the format
+  is stable.
+
+Auto-generated, not hand-maintained — avoids drift against
+`councillor.json`. If the terse `role` field proves too thin for routing
+in dogfood, add a `routing_hint` field to `councillor.json` rather than a
+parallel `COUNCILLORS.md`.
 
 ## `<<PROMOTE>>` — memory promotion (stub)
 
@@ -200,9 +226,9 @@ voice/style.)
 - Auto-approval / trust tiers per councillor.
 - Mid-job proposals (only reflection-time scanning for now).
 - Cross-council proposal sharing.
-- A councillor-visible roster of other councillors (`target_councillor`
-  is "hopeful" — the host validates).
 - Rich diffing on memory promotion (plain text bodies are short enough).
+- Hand-curated `COUNCILLORS.md` — roster is auto-generated from
+  `councillor.json` (see [Roster injection](#roster-injection)).
 
 ## Testing
 
