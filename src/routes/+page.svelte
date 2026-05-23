@@ -41,7 +41,14 @@
 
   <header class="head">
     <div>
-      <h1>{c.name}</h1>
+      <h1>
+        {c.name}
+        {#if data.pendingProposalCount > 0}
+          <a class="badge" href="/proposals" title="{data.pendingProposalCount} pending proposal{data.pendingProposalCount === 1 ? '' : 's'}">
+            {data.pendingProposalCount} proposal{data.pendingProposalCount === 1 ? '' : 's'}
+          </a>
+        {/if}
+      </h1>
       {#if c.description}<p class="desc">{c.description}</p>{/if}
       <p class="meta">
         {#if c.template}Template: <code>{c.template}</code> ·{/if}
@@ -219,4 +226,11 @@
   .status-cancelled { color: var(--muted); border-color: var(--border); }
   .dot.running { color: var(--accent); animation: pulse 1.4s ease-in-out infinite; }
   @keyframes pulse { 50% { opacity: 0.3; } }
+  .badge {
+    display: inline-block; vertical-align: middle; margin-left: 0.5rem;
+    font-size: 0.45em; padding: 0.2rem 0.55rem; border-radius: 999px;
+    border: 1px solid var(--accent); color: var(--accent);
+    background: rgba(255,255,255,0.02); text-decoration: none; font-weight: 600;
+  }
+  .badge:hover { background: var(--accent); color: #0f1115; }
 </style>

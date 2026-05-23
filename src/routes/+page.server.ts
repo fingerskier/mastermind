@@ -7,6 +7,7 @@ import {
 } from '$lib/server/councils';
 import { listJobs, readOutputSlug } from '$lib/server/jobs';
 import { listNotes } from '$lib/server/memory';
+import { listJobProposals } from '$lib/server/proposals';
 import { currentRuns } from '$lib/server/runner';
 import { councilRoot } from '$lib/server/paths';
 import type { Job } from '$lib/types';
@@ -21,7 +22,11 @@ export const load: PageServerLoad = async () => {
     return { hasCouncil: false as const, cwd: councilRoot() };
   }
   const council = await readCouncilWithCouncillors();
-  const [jobs, notes] = await Promise.all([listJobs(), listNotes()]);
+  const [jobs, notes, pendingProposals] = await Promise.all([
+    listJobs(),
+    listNotes(),
+    listJobProposals({ status: 'pending' })
+  ]);
   const running = new Set(currentRuns().map((r) => r.councillor));
   const recentByCouncillor: Record<string, RecentJob[]> = {};
   for (const c of council.councillors) recentByCouncillor[c.slug] = [];
@@ -42,7 +47,8 @@ export const load: PageServerLoad = async () => {
     council,
     notes,
     recentByCouncillor,
-    running: Array.from(running)
+    running: Array.from(running),
+    pendingProposalCount: pendingProposals.length
   };
 };
 
