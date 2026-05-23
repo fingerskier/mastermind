@@ -1,20 +1,22 @@
 import { error, fail, redirect } from '@sveltejs/kit';
 import { readCouncil } from '$lib/server/councils';
 import { readJob, readEvents, readInput, readOutput, readTranscript, rerunJob } from '$lib/server/jobs';
+import { listProposalsForSourceJob } from '$lib/server/proposals';
 import { cancelJob, isRunning, startJobInBackground } from '$lib/server/runner';
 import type { Actions, PageServerLoad } from './$types';
 
 export const load: PageServerLoad = async ({ params }) => {
   try {
-    const [council, job, events, input, transcript, output] = await Promise.all([
+    const [council, job, events, input, transcript, output, proposals] = await Promise.all([
       readCouncil(),
       readJob(params.jid),
       readEvents(params.jid),
       readInput(params.jid),
       readTranscript(params.jid),
-      readOutput(params.jid)
+      readOutput(params.jid),
+      listProposalsForSourceJob(params.jid)
     ]);
-    return { council, job, events, input, transcript, output };
+    return { council, job, events, input, transcript, output, proposals };
   } catch {
     error(404, 'Job not found');
   }

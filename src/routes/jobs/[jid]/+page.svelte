@@ -86,6 +86,31 @@
   </section>
 {/if}
 
+{#if data.proposals && data.proposals.length > 0}
+  <section>
+    <h2>Proposals emitted</h2>
+    <ul class="prop-list">
+      {#each data.proposals as p (p.id)}
+        <li class="prop">
+          <div class="prop-head">
+            <a class="prop-title" href="/proposals?status={p.status}">{p.title}</a>
+            <span class="status status-{p.status}">{p.status}</span>
+          </div>
+          <div class="prop-meta">
+            target: {p.target_councillor === 'all' ? 'all' : p.target_councillor ?? 'unassigned'}
+            · priority {p.priority}
+            {#if p.status === 'approved' && p.resulting_job_ids}
+              · → {#each p.resulting_job_ids as jid, i (jid)}{#if i > 0}, {/if}<a href="/jobs/{jid}">{jid}</a>{/each}
+            {:else if p.status === 'rejected' && p.reason}
+              · {p.reason}
+            {/if}
+          </div>
+        </li>
+      {/each}
+    </ul>
+  </section>
+{/if}
+
 <details>
   <summary>Prompt sent to adapter</summary>
   <pre class="block">{data.input}</pre>
@@ -129,4 +154,12 @@
   .mem-list { list-style: none; padding: 0; display: grid; gap: 0.3rem; }
   .mem-list a { color: var(--fg); }
   .mem-list a:hover { color: var(--accent); }
+  .prop-list { list-style: none; padding: 0; display: grid; gap: 0.5rem; }
+  .prop { border: 1px solid var(--border); border-radius: 6px; padding: 0.55rem 0.7rem; }
+  .prop-head { display: flex; justify-content: space-between; gap: 0.5rem; align-items: center; }
+  .prop-title { font-weight: 500; color: var(--fg); text-decoration: none; }
+  .prop-title:hover { color: var(--accent); }
+  .prop-meta { color: var(--muted); font-size: 0.85em; margin-top: 0.25rem; }
+  .prop-meta a { color: var(--fg); }
+  .prop-meta a:hover { color: var(--accent); }
 </style>
