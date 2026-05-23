@@ -1,6 +1,7 @@
 import { hasEmbedder, indexSearch } from './indexer';
 import { listNotes } from './memory';
 import { listPrivateNotes } from './memory_private';
+import { buildRosterSection } from './roster';
 import { MEMORY_CHAR_BUDGET, MEMORY_TOPK_PRIVATE, MEMORY_TOPK_SHARED } from './config';
 
 interface Entry {
@@ -54,7 +55,12 @@ async function fallback(councillorSlug: string): Promise<string> {
 }
 
 export async function assembleContextFor(councillorSlug: string, brief: string): Promise<string> {
-  if (!hasEmbedder()) return fallback(councillorSlug);
+  const roster = await buildRosterSection();
+
+  if (!hasEmbedder()) {
+    const body = await fallback(councillorSlug);
+    return [roster, body].filter(Boolean).join('\n\n');
+  }
 
   const sharedHits = await indexSearch(brief, { kinds: ['memory'], k: MEMORY_TOPK_SHARED });
   const privateHits = await indexSearch(brief, {
@@ -77,11 +83,13 @@ export async function assembleContextFor(councillorSlug: string, brief: string):
   }));
 
   if (sharedEntries.length === 0 && privEntries.length === 0) {
-    return fallback(councillorSlug);
+    const body = await fallback(councillorSlug);
+    return [roster, body].filter(Boolean).join('\n\n');
   }
 
   const { shared, priv } = applyBudget(sharedEntries, privEntries, MEMORY_CHAR_BUDGET);
   const parts = [
+    roster,
     formatSection('Shared council memory', shared),
     formatSection('Your memory', priv)
   ].filter(Boolean);

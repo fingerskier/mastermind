@@ -30,9 +30,12 @@ afterEach(() => {
 });
 
 describe('assembleContextFor (no embedder fallback)', () => {
-  it('returns empty when no memories exist', async () => {
+  it('returns only the roster when no memories exist', async () => {
     const ctx = await assembleContextFor('alice', 'any brief');
-    expect(ctx).toBe('');
+    expect(ctx).toContain('# Council roster');
+    expect(ctx).toContain('alice — Alice — cto');
+    expect(ctx).not.toContain('# Shared council memory');
+    expect(ctx).not.toContain('# Your memory');
   });
 
   it('includes shared memory verbatim in fallback', async () => {
@@ -57,5 +60,27 @@ describe('assembleContextFor (no embedder fallback)', () => {
     expect(ctx).toContain('# Your memory');
     expect(ctx).toContain('Alice Note');
     expect(ctx).toContain('private body');
+  });
+});
+
+describe('assembleContextFor — roster injection', () => {
+  it('prepends roster section above memory sections', async () => {
+    await createCouncillor({ name: 'Bob', role: 'cfo' });
+    await createNote({ title: 'Shared One', body: 'shared body' });
+    await createPrivateNote('alice', { title: 'Alice Note', body: 'private body' });
+    const ctx = await assembleContextFor('alice', 'any brief');
+    const rosterIdx = ctx.indexOf('# Council roster');
+    const sharedIdx = ctx.indexOf('# Shared council memory');
+    const privIdx = ctx.indexOf('# Your memory');
+    expect(rosterIdx).toBeGreaterThanOrEqual(0);
+    expect(rosterIdx).toBeLessThan(sharedIdx);
+    expect(rosterIdx).toBeLessThan(privIdx);
+  });
+
+  it('roster lists every councillor (including self)', async () => {
+    await createCouncillor({ name: 'Bob', role: 'cfo' });
+    const ctx = await assembleContextFor('alice', 'any brief');
+    expect(ctx).toContain('alice — Alice — cto');
+    expect(ctx).toContain('bob — Bob — cfo');
   });
 });
