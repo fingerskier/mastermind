@@ -15,8 +15,9 @@ import {
   writeOutput
 } from './jobs';
 import { resolveAdapter, type ResolvedAdapter } from './adapters';
-import { buildReflectionPrompt, parseMemoryBlocks } from './reflection';
+import { buildReflectionPrompt, parseJobBlocks, parseMemoryBlocks } from './reflection';
 import { createPrivateNote } from './memory_private';
+import { createJobProposal } from './proposals';
 import type { Job } from '$lib/types';
 
 interface ActiveRun {
@@ -114,6 +115,31 @@ async function reflectAfterSuccess(
 
   const persisted = await readJob(job.id);
   await writeJob({ ...persisted, memory_slugs: slugs });
+
+  const jobBlocks = parseJobBlocks(reflectionOut);
+  for (const jb of jobBlocks) {
+    try {
+      const p = await createJobProposal({
+        proposed_by: councillor.slug,
+        source_job_id: job.id,
+        title: jb.title,
+        brief: jb.brief,
+        target_councillor: jb.councillor,
+        priority: jb.priority
+      });
+      await appendEvent(job.id, {
+        at: new Date().toISOString(),
+        type: 'proposed_job',
+        message: `proposal ${p.id} (target: ${jb.councillor ?? 'unassigned'})`
+      });
+    } catch (err) {
+      await appendEvent(job.id, {
+        at: new Date().toISOString(),
+        type: 'reflection_failed',
+        message: `job proposal "${jb.title}" failed: ${err instanceof Error ? err.message : String(err)}`
+      });
+    }
+  }
 }
 
 async function buildPrompt(job: Job, personaBody: string): Promise<string> {

@@ -12,6 +12,7 @@ import { cancelJob, currentRuns, runJobNow } from './runner';
 import { createMockAdapter } from './adapters';
 import type { AdapterRunStreams } from './adapters';
 import { listPrivateNotes } from './memory_private';
+import { listJobProposals } from './proposals';
 
 let tmpRoot: string;
 let prevEnv: string | undefined;
@@ -213,6 +214,39 @@ describe('runner reflection', () => {
     const finished = await readJob(job.id);
     expect(finished.status).toBe('failed');
     expect(await listPrivateNotes('alice')).toEqual([]);
+  });
+
+  it('parses <<JOB>> blocks into pending proposals on success', async () => {
+    const reflection = [
+      '<<MEMORY title="Lesson">>',
+      'body',
+      '<</MEMORY>>',
+      '<<JOB title="Follow up" councillor="cto" priority="high">>',
+      'look at Q3 numbers',
+      '<</JOB>>'
+    ].join('\n');
+    const adapterOverride = makeReflectionAdapter(reflection);
+    const job = await createJob({ title: 'Probe', brief: 'do thing', councillor_slug: 'alice' });
+    await runJobNow(job.id, { adapterOverride });
+
+    const proposals = await listJobProposals({ status: 'pending' });
+    expect(proposals).toHaveLength(1);
+    expect(proposals[0].title).toBe('Follow up');
+    expect(proposals[0].brief).toBe('look at Q3 numbers');
+    expect(proposals[0].target_councillor).toBe('cto');
+    expect(proposals[0].priority).toBe('high');
+    expect(proposals[0].proposed_by).toBe('alice');
+    expect(proposals[0].source_job_id).toBe(job.id);
+
+    const events = await readEvents(job.id);
+    expect(events.some((e) => e.type === 'proposed_job')).toBe(true);
+  });
+
+  it('skips <<JOB>> emission when reflection produces no JOB blocks', async () => {
+    const adapterOverride = makeReflectionAdapter('just prose, no blocks');
+    const job = await createJob({ title: 'Quiet', brief: 'q', councillor_slug: 'alice' });
+    await runJobNow(job.id, { adapterOverride });
+    expect(await listJobProposals({ status: 'pending' })).toEqual([]);
   });
 });
 
