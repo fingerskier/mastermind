@@ -122,14 +122,23 @@ a thin wrapper that runs `template-install` against the bundled JSON.
 
 ```ts
 export async function loadTemplate(source: string): Promise<CouncilTemplate>;
+export function parseTemplate(jsonString: string): CouncilTemplate;
 ```
 
-- `source` is a URL (`http(s)://...`) or a filesystem path
-  (absolute or relative to `process.cwd()`).
-- URL fetch: `fetch()` with a 10s `AbortController` timeout, follow up
-  to 3 redirects, reject body larger than 2 MB (streamed), require 2xx.
-- Path read: `readFile(source, 'utf8')`.
-- Parse JSON, then run the schema validator.
+- `loadTemplate(source)`:
+  - `source` is a URL (`http(s)://...`) or a filesystem path
+    (absolute or relative to `process.cwd()`).
+  - URL fetch: `fetch()` with a 10s `AbortController` timeout, follow up
+    to 3 redirects, reject body larger than 2 MB (streamed), require 2xx.
+  - Path read: `readFile(source, 'utf8')`.
+  - Delegates to `parseTemplate` for the JSON-string step.
+- `parseTemplate(jsonString)`:
+  - Synchronous JSON.parse + schema validator.
+  - The seam used by the UI file-upload action (it owns the
+    `File` → text step itself; loader stays free of `File`/`Blob`).
+  - Same 2 MB cap applies: callers must reject inputs larger than
+    `2 * 1024 * 1024` bytes before passing in (the upload action enforces
+    this when reading the `FormData` entry).
 
 Failures throw the named errors below.
 
@@ -240,8 +249,8 @@ CLI catches each → prints to stderr, exits 1.
 
 | Route | When | Behavior |
 |---|---|---|
-| `/` (setup, no `council.json`) | always | New panel "Install from template" beside the blank-create form. Inputs: URL textbox **or** file upload. Submit → POST `/import?action=preview`. |
-| `/import` | linked from setup form and from council home | `+page.server.ts` actions `preview` (loads + plans) and `apply` (commits). Re-renders with the `ApplyPlan` summary and a Confirm button. On success → `redirect('/')`. |
+| `/` (setup, no `council.json`) | always | New panel "Install from template" beside the blank-create form. Inputs: URL textbox **or** `<input type="file" accept="application/json">` upload. Submit → POST `/import?action=preview`. |
+| `/import` | linked from setup form and from council home | `+page.server.ts` actions `preview` (loads + plans) and `apply` (commits). `preview` accepts either a `source` text field (URL or local path → `loadTemplate`) or a `file` upload (reads the `FormData` entry as text, rejects > 2 MB, then `parseTemplate`). Re-renders with the `ApplyPlan` summary and a Confirm button (the parsed template JSON is round-tripped through a hidden field so `apply` doesn't need to re-fetch). On success → `redirect('/')`. |
 | `/export` | linked from council home | `+page.svelte` shows checkboxes for each councillor / memory note / queued job (defaults per above), plus required fields for template name and version. Submit streams JSON with `Content-Disposition: attachment; filename="<slug>.template.json"`. |
 | `/` (council exists, layout) | always | Header gets two small links: "Install template" → `/import`, "Export…" → `/export`. Added in `+layout.svelte`. |
 
@@ -310,6 +319,8 @@ existing `councils.test.ts` pattern.
 - `format_version: 2` → rejected with the version in the message.
 - `sample_jobs[i].councillor_slug` unknown → rejected.
 - Local-path source: `loadTemplate('./fixtures/x.json')` works.
+- `parseTemplate(jsonString)` validates and returns same shape as
+  `loadTemplate`; bad JSON → `TemplateParseError`.
 - HTTP source: mock `global.fetch` (vitest spy) — returns body and
   asserts the 10s `AbortController` is wired; body cap rejects > 2 MB
   (simulated via streamed read).
