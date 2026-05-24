@@ -7,6 +7,17 @@
   let timer: ReturnType<typeof setInterval> | null = null;
   onMount(() => { timer = setInterval(() => invalidateAll(), 2000); });
   onDestroy(() => { if (timer) clearInterval(timer); });
+
+  function ageBg(created: string, jobs: Array<{ created_at: string }>): string {
+    if (jobs.length < 2) return 'hsl(120 35% 20% / 0.28)';
+    const ts = jobs.map(j => new Date(j.created_at).getTime());
+    const max = Math.max(...ts);
+    const min = Math.min(...ts);
+    const span = max - min;
+    const t = span === 0 ? 0 : (max - new Date(created).getTime()) / span;
+    const hue = 120 * (1 - t);
+    return `hsl(${hue.toFixed(0)} 35% 20% / 0.28)`;
+  }
 </script>
 
 {#if !data.hasCouncil}
@@ -97,7 +108,7 @@
               <ul class="job-list">
                 {#each jobs as j (j.id)}
                   <li>
-                    <a class="job-card" href="/jobs/{j.id}">
+                    <a class="job-card" href="/jobs/{j.id}" style="background: {ageBg(j.created_at, jobs)};">
                       <div class="job-title">
                         <span class="job-name">{j.title}</span>
                         <span class="status status-{j.status}">{j.status}</span>
