@@ -17,7 +17,23 @@
       <label><span>Version *</span><input name="version" required value="0.1.0" /></label>
       <label><span>Description</span><textarea name="description" rows="2"></textarea></label>
       <label><span>Author</span><input name="author" /></label>
-      <label><span>License</span><input name="license" placeholder="e.g. MIT" /></label>
+      <label><span>License</span><input name="license" list="license-options" placeholder="e.g. MIT" /></label>
+      <datalist id="license-options">
+        <option value="MIT"></option>
+        <option value="Apache-2.0"></option>
+        <option value="BSD-2-Clause"></option>
+        <option value="BSD-3-Clause"></option>
+        <option value="GPL-3.0-or-later"></option>
+        <option value="AGPL-3.0-or-later"></option>
+        <option value="LGPL-3.0-or-later"></option>
+        <option value="MPL-2.0"></option>
+        <option value="ISC"></option>
+        <option value="Unlicense"></option>
+        <option value="CC0-1.0"></option>
+        <option value="CC-BY-4.0"></option>
+        <option value="CC-BY-SA-4.0"></option>
+        <option value="Proprietary"></option>
+      </datalist>
     </fieldset>
 
     <fieldset>
