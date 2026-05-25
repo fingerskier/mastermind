@@ -77,3 +77,136 @@ export class TemplateNeedsConfirmation extends Error {
     this.name = 'TemplateNeedsConfirmation';
   }
 }
+
+import { slugify } from './paths';
+
+// ---------- validators ----------
+
+function isObject(v: unknown): v is Record<string, unknown> {
+  return typeof v === 'object' && v !== null && !Array.isArray(v);
+}
+
+function requireString(obj: Record<string, unknown>, path: string, key: string): string {
+  const v = obj[key];
+  if (typeof v !== 'string' || !v.trim()) {
+    throw new TemplateValidationError(`${path}.${key} is required (non-empty string).`);
+  }
+  return v;
+}
+
+function optionalString(obj: Record<string, unknown>, path: string, key: string): string | undefined {
+  const v = obj[key];
+  if (v === undefined) return undefined;
+  if (typeof v !== 'string') {
+    throw new TemplateValidationError(`${path}.${key} must be a string when provided.`);
+  }
+  return v;
+}
+
+function validateCouncillor(raw: unknown, path: string): TemplateCouncillor {
+  if (!isObject(raw)) throw new TemplateValidationError(`${path} must be an object.`);
+  const name = requireString(raw, path, 'name');
+  const role = requireString(raw, path, 'role');
+  const adapter = requireString(raw, path, 'adapter');
+  const persona = requireString(raw, path, 'persona');
+  const slug = optionalString(raw, path, 'slug');
+  const routing_hint = optionalString(raw, path, 'routing_hint');
+  const reflect = raw.reflect === undefined ? undefined : Boolean(raw.reflect);
+  if (slug && slug !== slugify(name)) {
+    throw new TemplateValidationError(
+      `${path}.slug ${JSON.stringify(slug)} must match slugify(name) = ${JSON.stringify(slugify(name))}.`
+    );
+  }
+  return { name, role, adapter, persona, slug, routing_hint, reflect };
+}
+
+function validateMemoryNote(raw: unknown, path: string): TemplateMemoryNote {
+  if (!isObject(raw)) throw new TemplateValidationError(`${path} must be an object.`);
+  const title = requireString(raw, path, 'title');
+  const body = optionalString(raw, path, 'body') ?? '';
+  return { title, body };
+}
+
+function validateSampleJob(raw: unknown, path: string): TemplateSampleJob {
+  if (!isObject(raw)) throw new TemplateValidationError(`${path} must be an object.`);
+  return {
+    title: requireString(raw, path, 'title'),
+    brief: requireString(raw, path, 'brief'),
+    councillor_slug: requireString(raw, path, 'councillor_slug')
+  };
+}
+
+function derivedSlug(c: TemplateCouncillor): string {
+  return c.slug?.trim() ? slugify(c.slug) : slugify(c.name);
+}
+
+function validateTemplate(raw: unknown): CouncilTemplate {
+  if (!isObject(raw)) throw new TemplateValidationError('Template root must be a JSON object.');
+  if (raw.format_version !== 1) {
+    throw new TemplateValidationError(
+      `Unsupported format_version ${JSON.stringify(raw.format_version)}; expected 1.`
+    );
+  }
+  const name = requireString(raw, 'template', 'name');
+  const version = requireString(raw, 'template', 'version');
+  const description = optionalString(raw, 'template', 'description');
+  const author = optionalString(raw, 'template', 'author');
+  const license = optionalString(raw, 'template', 'license');
+
+  if (!isObject(raw.council)) throw new TemplateValidationError('template.council must be an object.');
+  const council = {
+    name: requireString(raw.council, 'template.council', 'name'),
+    description: optionalString(raw.council, 'template.council', 'description')
+  };
+
+  if (!Array.isArray(raw.councillors)) {
+    throw new TemplateValidationError('template.councillors must be an array.');
+  }
+  const councillors = raw.councillors.map((c, i) => validateCouncillor(c, `councillors[${i}]`));
+
+  let memory: TemplateMemoryNote[] | undefined;
+  if (raw.memory !== undefined) {
+    if (!Array.isArray(raw.memory)) throw new TemplateValidationError('template.memory must be an array.');
+    memory = raw.memory.map((n, i) => validateMemoryNote(n, `memory[${i}]`));
+  }
+
+  let sample_jobs: TemplateSampleJob[] | undefined;
+  if (raw.sample_jobs !== undefined) {
+    if (!Array.isArray(raw.sample_jobs)) {
+      throw new TemplateValidationError('template.sample_jobs must be an array.');
+    }
+    sample_jobs = raw.sample_jobs.map((j, i) => validateSampleJob(j, `sample_jobs[${i}]`));
+    const slugs = new Set(councillors.map(derivedSlug));
+    sample_jobs.forEach((j, i) => {
+      if (!slugs.has(j.councillor_slug)) {
+        throw new TemplateValidationError(
+          `sample_jobs[${i}].councillor_slug ${JSON.stringify(j.councillor_slug)} does not match any councillor.`
+        );
+      }
+    });
+  }
+
+  return {
+    format_version: 1,
+    name,
+    version,
+    description,
+    author,
+    license,
+    council,
+    councillors,
+    memory,
+    sample_jobs
+  };
+}
+
+export function parseTemplate(jsonString: string): CouncilTemplate {
+  let raw: unknown;
+  try {
+    raw = JSON.parse(jsonString);
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : String(err);
+    throw new TemplateParseError(`Invalid JSON: ${msg}`);
+  }
+  return validateTemplate(raw);
+}
