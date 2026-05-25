@@ -152,6 +152,7 @@ vite.config.ts.timestamp-*
 /councillors/
 /memory/
 /jobs/
+/proposals/
 /.index/
 
 # dogfood:init target dirs

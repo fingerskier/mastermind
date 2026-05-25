@@ -1,6 +1,6 @@
 {
   "name": "landsraad",
-  "version": "0.0.1",
+  "version": "2026.5.20",
   "description": "Local-first AI council chamber: create councils and councillors from a SvelteKit app.",
   "type": "module",
   "bin": {
@@ -15,7 +15,8 @@
     "check": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json",
     "test": "vitest run",
     "test:watch": "vitest",
-    "prepublishOnly": "npm run build",
+    "predeploy": "npm run check && npm run test && npm run build",
+    "prepublishOnly": "npm run check && npm run test && npm run build",
     "dogfood:init": "vite-node scripts/template-install.ts -- templates/dogfood.template.json --target ./dogfood --yes",
     "template:install": "vite-node scripts/template-install.ts --",
     "template:export": "vite-node scripts/template-export.ts --",

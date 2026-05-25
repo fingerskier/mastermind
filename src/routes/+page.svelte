@@ -59,8 +59,8 @@
       <h1>
         {c.name}
         {#if data.pendingProposalCount > 0}
-          <a class="badge" href="/proposals" title="{data.pendingProposalCount} pending proposal{data.pendingProposalCount === 1 ? '' : 's'}">
-            {data.pendingProposalCount} proposal{data.pendingProposalCount === 1 ? '' : 's'}
+          <a class="badge" href="/proposals" title="{data.pendingProposalCount} pending suggested job{data.pendingProposalCount === 1 ? '' : 's'}">
+            {data.pendingProposalCount} suggested job{data.pendingProposalCount === 1 ? '' : 's'}
           </a>
         {/if}
       </h1>
@@ -183,7 +183,10 @@
     gap: 1rem;
     align-items: start;
     overflow-x: auto;
-    padding-bottom: 0.25rem;
+    padding: 0 1.5rem 0.25rem;
+    width: 100vw;
+    margin-left: calc(-50vw + 50%);
+    box-sizing: border-box;
   }
   .column {
     border: 1px solid var(--border);

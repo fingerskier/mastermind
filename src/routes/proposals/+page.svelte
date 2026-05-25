@@ -4,7 +4,7 @@
 </script>
 
 <header class="head">
-  <h1>Proposals</h1>
+  <h1>Suggested jobs</h1>
   <nav class="tabs">
     <a class:active={data.status === 'pending'} href="/proposals?status=pending">Pending</a>
     <a class:active={data.status === 'approved'} href="/proposals?status=approved">Approved</a>
@@ -18,7 +18,7 @@
 {#if form?.error}<div class="error">{form.error}</div>{/if}
 
 {#if data.proposals.length === 0}
-  <p class="empty">No {data.status} proposals.</p>
+  <p class="empty">No {data.status} suggested jobs.</p>
 {:else}
   <ul class="list">
     {#each data.proposals as p (p.id)}

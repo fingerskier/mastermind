@@ -88,7 +88,7 @@
 
 {#if data.proposals && data.proposals.length > 0}
   <section>
-    <h2>Proposals emitted</h2>
+    <h2>Suggested jobs</h2>
     <ul class="prop-list">
       {#each data.proposals as p (p.id)}
         <li class="prop">
