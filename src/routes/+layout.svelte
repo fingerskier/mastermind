@@ -1,9 +1,16 @@
 <script lang="ts">
+  import { page } from '$app/state';
   let { children } = $props();
 </script>
 
 <header>
   <a href="/" class="brand">Landsraad</a>
+  {#if page.data?.hasCouncil}
+    <nav class="links">
+      <a href="/import">Install template</a>
+      <a href="/export">Export…</a>
+    </nav>
+  {/if}
 </header>
 
 <main>
@@ -34,6 +41,9 @@
   header {
     border-bottom: 1px solid var(--border);
     padding: 0.9rem 1.5rem;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
   }
   .brand {
     color: var(--fg);
@@ -41,6 +51,9 @@
     font-weight: 600;
     letter-spacing: 0.04em;
   }
+  .links { display: flex; gap: 1rem; }
+  .links a { color: var(--muted); text-decoration: none; font-size: 0.9em; }
+  .links a:hover { color: var(--accent); }
   main {
     max-width: 880px;
     margin: 0 auto;

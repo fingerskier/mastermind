@@ -43,6 +43,10 @@
         <button type="submit" class="btn primary">Create council</button>
       </div>
     </form>
+    <p class="or">— or —</p>
+    <p>
+      <a class="btn" href="/import">Install from template (URL or file)</a>
+    </p>
   </section>
 {:else}
   {@const c = data.council}
@@ -162,6 +166,7 @@
   .empty { color: var(--muted); padding: 1rem 0; }
 
   .form { display: grid; gap: 1rem; max-width: 560px; margin-top: 1rem; }
+  .or { color: var(--muted); margin: 1.25rem 0 0.5rem; text-align: center; max-width: 560px; }
   label { display: grid; gap: 0.35rem; }
   label > span { color: var(--muted); font-size: 0.9em; }
   input, textarea {
