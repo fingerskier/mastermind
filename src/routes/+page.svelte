@@ -37,7 +37,7 @@
       </label>
       <label>
         <span>Template <em>(optional)</em></span>
-        <input name="template" maxlength="80" value={form?.template ?? ''} placeholder="e.g. c-suite, hedge-fund" />
+        <input name="template" maxlength="500" value={form?.template ?? ''} placeholder="e.g. c-suite, hedge-fund, or template URL" />
       </label>
       <div class="actions">
         <button type="submit" class="btn primary">Create council</button>
