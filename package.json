@@ -22,7 +22,9 @@
   "files": [
     "bin",
     "build",
-    "static"
+    "scripts",
+    "static",
+    "templates"
   ],
   "devDependencies": {
     "@sveltejs/adapter-node": "^5.2.12",
