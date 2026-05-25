@@ -262,3 +262,49 @@ export async function loadTemplate(source: string): Promise<CouncilTemplate> {
   const text = isUrl(source) ? await fetchTemplateText(source) : await readFile(source, 'utf8');
   return parseTemplate(text);
 }
+
+import { hasCouncil } from './councils';
+import { listCouncillors } from './councillors';
+import { listNotes } from './memory';
+import { listJobs } from './jobs';
+
+function memoryNoteSlug(n: TemplateMemoryNote): string {
+  return slugify(n.title);
+}
+
+export async function planApply(t: CouncilTemplate): Promise<ApplyPlan> {
+  const exists = hasCouncil();
+  const existingCouncillorSlugs = exists
+    ? new Set((await listCouncillors()).map((c) => c.slug))
+    : new Set<string>();
+  const existingMemorySlugs = exists
+    ? new Set((await listNotes()).map((n) => n.slug))
+    : new Set<string>();
+  const jobsCount = exists ? (await listJobs()).length : 0;
+
+  const cAdd: string[] = [];
+  const cOver: string[] = [];
+  for (const c of t.councillors) {
+    const slug = derivedSlug(c);
+    (existingCouncillorSlugs.has(slug) ? cOver : cAdd).push(slug);
+  }
+
+  const mAdd: string[] = [];
+  const mOver: string[] = [];
+  for (const n of t.memory ?? []) {
+    const slug = memoryNoteSlug(n);
+    (existingMemorySlugs.has(slug) ? mOver : mAdd).push(slug);
+  }
+
+  const sampleJobsRequested = (t.sample_jobs ?? []).length;
+  const sample_jobs = jobsCount > 0
+    ? { add: 0, skipped_because_jobs_exist: true }
+    : { add: sampleJobsRequested, skipped_because_jobs_exist: false };
+
+  return {
+    council: { exists, willOverwrite: exists },
+    councillors: { add: cAdd, overwrite: cOver },
+    memory: { add: mAdd, overwrite: mOver },
+    sample_jobs
+  };
+}

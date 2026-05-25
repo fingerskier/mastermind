@@ -135,3 +135,59 @@ describe('loadTemplate (URL)', () => {
     expect(init.signal).toBeInstanceOf(AbortSignal);
   });
 });
+
+import { hasCouncil, createCouncil } from './councils';
+import { createCouncillor } from './councillors';
+import { createNote } from './memory';
+import { createJob } from './jobs';
+import { planApply } from './templates';
+
+describe('planApply', () => {
+  let tmpRoot: string;
+  let prevEnv: string | undefined;
+
+  beforeEach(() => {
+    prevEnv = process.env.LANDSRAAD_COUNCIL_ROOT;
+    tmpRoot = mkdtempSync(join(tmpdir(), 'pa-'));
+    process.env.LANDSRAAD_COUNCIL_ROOT = tmpRoot;
+  });
+  afterEach(() => {
+    rmSync(tmpRoot, { recursive: true, force: true });
+    if (prevEnv === undefined) delete process.env.LANDSRAAD_COUNCIL_ROOT;
+    else process.env.LANDSRAAD_COUNCIL_ROOT = prevEnv;
+  });
+
+  it('on empty cwd reports all adds, no overwrites', async () => {
+    const plan = await planApply(validTemplate);
+    expect(plan.council).toEqual({ exists: false, willOverwrite: false });
+    expect(plan.councillors).toEqual({ add: ['mocky'], overwrite: [] });
+    expect(plan.memory.add).toEqual(['house-rules']);
+    expect(plan.memory.overwrite).toEqual([]);
+    expect(plan.sample_jobs).toEqual({ add: 1, skipped_because_jobs_exist: false });
+  });
+
+  it('on existing council with same-slug councillor reports overwrite', async () => {
+    await createCouncil({ name: 'Existing' });
+    await createCouncillor({ name: 'Mocky', role: 'orig', adapter: 'mock:local', persona: 'orig' });
+    const plan = await planApply(validTemplate);
+    expect(plan.council).toEqual({ exists: true, willOverwrite: true });
+    expect(plan.councillors.overwrite).toEqual(['mocky']);
+    expect(plan.councillors.add).toEqual([]);
+  });
+
+  it('reports sample_jobs skipped when council has any jobs', async () => {
+    await createCouncil({ name: 'Existing' });
+    await createCouncillor({ name: 'Mocky', role: 'r', adapter: 'mock:local', persona: 'p' });
+    await createJob({ title: 'pre-existing', brief: 'b', councillor_slug: 'mocky' });
+    const plan = await planApply(validTemplate);
+    expect(plan.sample_jobs).toEqual({ add: 0, skipped_because_jobs_exist: true });
+  });
+
+  it('reports memory overwrite for same-slug note', async () => {
+    await createCouncil({ name: 'Existing' });
+    await createNote({ title: 'House Rules', body: '- different\n' });
+    const plan = await planApply(validTemplate);
+    expect(plan.memory.overwrite).toEqual(['house-rules']);
+    expect(plan.memory.add).toEqual([]);
+  });
+});
