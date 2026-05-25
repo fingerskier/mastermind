@@ -191,3 +191,100 @@ describe('planApply', () => {
     expect(plan.memory.add).toEqual([]);
   });
 });
+
+import { readCouncil, updateCouncil } from './councils';
+import { readCouncillor, listCouncillors as listCs } from './councillors';
+import { readNote, listNotes as listN } from './memory';
+import { listJobs as listJ } from './jobs';
+import { applyTemplate, TemplateNeedsConfirmation } from './templates';
+
+describe('applyTemplate (empty cwd)', () => {
+  let tmpRoot: string;
+  let prevEnv: string | undefined;
+  beforeEach(() => {
+    prevEnv = process.env.LANDSRAAD_COUNCIL_ROOT;
+    tmpRoot = mkdtempSync(join(tmpdir(), 'at-'));
+    process.env.LANDSRAAD_COUNCIL_ROOT = tmpRoot;
+  });
+  afterEach(() => {
+    rmSync(tmpRoot, { recursive: true, force: true });
+    if (prevEnv === undefined) delete process.env.LANDSRAAD_COUNCIL_ROOT;
+    else process.env.LANDSRAAD_COUNCIL_ROOT = prevEnv;
+  });
+
+  it('creates council, councillors, memory, sample jobs', async () => {
+    await applyTemplate(validTemplate, { confirmedOverwrite: false });
+    const council = await readCouncil();
+    expect(council.name).toBe('Test');
+    expect(council.template).toBe('Test Council@0.1.0');
+
+    const cs = await listCs();
+    expect(cs.map((c) => c.slug)).toEqual(['mocky']);
+    expect(cs[0].persona).toBe('You are Mocky.');
+
+    const notes = await listN();
+    expect(notes.map((n) => n.slug)).toEqual(['house-rules']);
+
+    const jobs = await listJ();
+    expect(jobs).toHaveLength(1);
+    expect(jobs[0].status).toBe('queued');
+    expect(jobs[0].title).toBe('Hello');
+    expect(jobs[0].councillor_slug).toBe('mocky');
+  });
+});
+
+describe('applyTemplate (existing council, conflicts)', () => {
+  let tmpRoot: string;
+  let prevEnv: string | undefined;
+  beforeEach(async () => {
+    prevEnv = process.env.LANDSRAAD_COUNCIL_ROOT;
+    tmpRoot = mkdtempSync(join(tmpdir(), 'at2-'));
+    process.env.LANDSRAAD_COUNCIL_ROOT = tmpRoot;
+    await createCouncil({ name: 'Existing', description: 'orig' });
+    await createCouncillor({ name: 'Mocky', role: 'orig', adapter: 'mock:local', persona: 'orig' });
+  });
+  afterEach(() => {
+    rmSync(tmpRoot, { recursive: true, force: true });
+    if (prevEnv === undefined) delete process.env.LANDSRAAD_COUNCIL_ROOT;
+    else process.env.LANDSRAAD_COUNCIL_ROOT = prevEnv;
+  });
+
+  it('throws TemplateNeedsConfirmation when not confirmed', async () => {
+    await expect(
+      applyTemplate(validTemplate, { confirmedOverwrite: false })
+    ).rejects.toThrow(TemplateNeedsConfirmation);
+  });
+
+  it('replaces conflicting councillor persona when confirmed', async () => {
+    await applyTemplate(validTemplate, { confirmedOverwrite: true });
+    const c = await readCouncillor('mocky');
+    expect(c.persona).toBe('You are Mocky.');
+    expect(c.role).toBe('echo');
+  });
+
+  it('skips sample_jobs when jobs already exist', async () => {
+    await createJob({ title: 'pre', brief: 'b', councillor_slug: 'mocky' });
+    const before = (await listJ()).length;
+    await applyTemplate(validTemplate, { confirmedOverwrite: true });
+    const after = (await listJ()).length;
+    expect(after).toBe(before);
+  });
+
+  it('never touches existing jobs/ run artifacts', async () => {
+    const j = await createJob({ title: 'pre', brief: 'b', councillor_slug: 'mocky' });
+    await applyTemplate(validTemplate, { confirmedOverwrite: true });
+    const jobs = await listJ();
+    expect(jobs.find((x) => x.id === j.id)).toBeDefined();
+  });
+
+  it('overwrites council meta to template values (slug follows new name)', async () => {
+    // updateCouncil re-derives slug from name. Council slug is metadata only;
+    // the council root is the cwd, so changing the slug is safe.
+    await applyTemplate(validTemplate, { confirmedOverwrite: true });
+    const c = await readCouncil();
+    expect(c.name).toBe('Test');
+    expect(c.slug).toBe('test');
+    expect(c.description).toBe('desc');
+    expect(c.template).toBe('Test Council@0.1.0');
+  });
+});

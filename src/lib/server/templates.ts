@@ -263,10 +263,10 @@ export async function loadTemplate(source: string): Promise<CouncilTemplate> {
   return parseTemplate(text);
 }
 
-import { hasCouncil } from './councils';
-import { listCouncillors } from './councillors';
-import { listNotes } from './memory';
-import { listJobs } from './jobs';
+import { hasCouncil, createCouncil, updateCouncil } from './councils';
+import { listCouncillors, createCouncillor, updateCouncillor } from './councillors';
+import { listNotes, createNote, updateNote } from './memory';
+import { listJobs, createJob } from './jobs';
 
 function memoryNoteSlug(n: TemplateMemoryNote): string {
   return slugify(n.title);
@@ -306,4 +306,86 @@ export async function planApply(t: CouncilTemplate): Promise<ApplyPlan> {
     memory: { add: mAdd, overwrite: mOver },
     sample_jobs
   };
+}
+
+function provenance(t: CouncilTemplate): string {
+  return `${t.name}@${t.version}`;
+}
+
+export async function applyTemplate(
+  t: CouncilTemplate,
+  opts: { confirmedOverwrite: boolean }
+): Promise<ApplyPlan> {
+  const plan = await planApply(t);
+  const needsConfirm =
+    plan.council.willOverwrite ||
+    plan.councillors.overwrite.length > 0 ||
+    plan.memory.overwrite.length > 0;
+  if (needsConfirm && !opts.confirmedOverwrite) {
+    throw new TemplateNeedsConfirmation(plan);
+  }
+
+  // 1. Council meta.
+  if (plan.council.exists) {
+    await updateCouncil({
+      name: t.council.name,
+      description: t.council.description ?? '',
+      template: provenance(t)
+    });
+  } else {
+    await createCouncil({
+      name: t.council.name,
+      description: t.council.description ?? '',
+      template: provenance(t)
+    });
+  }
+
+  // 2. Councillors (overwrite or create).
+  const overwriteSet = new Set(plan.councillors.overwrite);
+  for (const c of t.councillors) {
+    const slug = derivedSlug(c);
+    if (overwriteSet.has(slug)) {
+      await updateCouncillor(slug, {
+        name: c.name,
+        role: c.role,
+        routing_hint: c.routing_hint,
+        adapter: c.adapter,
+        persona: c.persona,
+        reflect: c.reflect
+      });
+    } else {
+      await createCouncillor({
+        name: c.name,
+        role: c.role,
+        routing_hint: c.routing_hint,
+        adapter: c.adapter,
+        persona: c.persona,
+        reflect: c.reflect
+      });
+    }
+  }
+
+  // 3. Memory (overwrite or create).
+  const memOverwriteSet = new Set(plan.memory.overwrite);
+  for (const n of t.memory ?? []) {
+    const slug = memoryNoteSlug(n);
+    if (memOverwriteSet.has(slug)) {
+      await updateNote(slug, n.body);
+    } else {
+      await createNote({ title: n.title, body: n.body });
+    }
+  }
+
+  // 4. Sample jobs (only if jobs dir is empty per plan).
+  if (!plan.sample_jobs.skipped_because_jobs_exist) {
+    for (const j of t.sample_jobs ?? []) {
+      await createJob({
+        title: j.title,
+        brief: j.brief,
+        councillor_slug: j.councillor_slug
+      });
+    }
+  }
+
+  return plan;
 }
