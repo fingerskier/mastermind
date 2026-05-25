@@ -1,20 +1,28 @@
-# Memories
-* promote private to shared
-  * agent proposes — see `superpowers/specs/2026-05-23-agent-proposals.md` (`<<PROMOTE>>` stub / `<<MEMORY scope="shared">>` variant)
-* sunsetting/decay
-  * sleep/dream setting where councillors consolidate their memories
-  * also sleep/dream for shared memories
+# Open questions
 
----
+Live design questions not yet committed to. See [`SPECIFICATION.md`](../SPECIFICATION.md) for what's shipped and what's explicitly out-of-scope.
 
-# Agent Proposals
-* jobs for other agents — **shipped (Phase 1)** — `superpowers/specs/2026-05-23-agent-proposals.md` + plan `superpowers/plans/2026-05-23-agent-proposals-jobs.md`
-  * `<<JOB>>` parsed in reflection; proposals land at `/proposals` with approve/reject; auto-roster injected into context so councillors know each other's slugs
-  * councillor awareness via terse roster section in `assembleContextFor`; unknown target slugs validated host-side (re-assign required at approval)
-* `<<PROMOTE>>` / `<<MEMORY scope="shared">>` — **Phase 2 deferred**; pick Option A vs B in spec after dogfooding `<<JOB>>`
-* jobs for the user?
+## Memory promotion (private → shared)
 
----
+`<<JOB>>` proposals (Phase 1) shipped. `<<PROMOTE>>` / `<<MEMORY scope="shared">>` is deferred — pick after first real promote desire surfaces in dogfood. Candidates:
 
-# Review
-* user gets a synopsis of recent work and outstanding issues
+- **Option A — dedicated block.** `<<PROMOTE memory-slug="..." reason="...">>` references an existing private entry by slug. Approve → copy to shared, delete private row.
+- **Option B — `scope` attribute on `<<MEMORY>>` (preferred).** `<<MEMORY title="..." scope="shared">>` lets a councillor flag *this very memory* as shared at creation time. Same-slug re-emission of an existing private entry with `scope="shared"` is treated as a promote.
+
+Both flow through `proposals/memories/<...>.json` and a review UI. Option B is one fewer concept; Option A is more explicit for "promote that one over there."
+
+## Memory consolidation / decay
+
+- Sleep/dream pass where each councillor consolidates its own private memories.
+- Same for shared memory (multi-councillor consolidation).
+- Memory TTL / auto-archive.
+
+## Review surface
+
+User-facing synopsis of recent work and outstanding issues — what to surface on the home page beyond the current activity feed.
+
+## Misc
+
+- Dedupe of repeated `<<JOB>>` proposals on `(title, source_councillor)`?
+- Jobs targeting the user (not a councillor)?
+- Approval scope — always user, or designated "director" councillor auto-approves some classes?

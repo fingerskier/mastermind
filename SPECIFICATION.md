@@ -1,6 +1,6 @@
 # Landsraad — Specification
 
-Status: v1 (council + councillor + jobs + memory + adapters + activity dashboard). High-level only. Implementation details live in `docs/` and in code.
+Status: v1 (council + councillor + jobs + shared & private memory + reflection + agent proposals + council templates + adapters + activity dashboard). High-level only. Implementation details live in `docs/` and in code.
 
 ---
 
@@ -53,7 +53,7 @@ A configured group of councillors plus the state that supports them: jobs, share
 
 ### Councillor
 
-A named council member with a role, persona (markdown), and an **adapter** that says how to actually invoke them. Councillors own domain work in their area of responsibility.
+A named council member with a role, persona (markdown), and an **adapter** that says how to actually invoke them. Councillors own domain work in their area of responsibility. A councillor also carries a free-form `routing_hint` string used by the auto-generated council roster (see [Roster](#roster)) so other councillors can route follow-up jobs to them.
 
 ### Adapter
 
@@ -84,11 +84,48 @@ Jobs are one-shot. To repeat a job, the director clones it. Jobs are scoped to o
 
 ### Memory
 
-`<council>/memory/*.md` — shared markdown notes. Every job invocation passes the council's memory to the adapter as part of the prompt context. The director (and, later, councillors themselves) can create, edit, and delete memory notes. There is no embedding/retrieval layer in v1; the whole memory directory is included on every run. Keep it small.
+Two tiers, both markdown on disk:
+
+- **Shared council memory** — `<council>/memory/*.md`. Visible to every councillor.
+- **Private per-councillor memory** — `<council>/councillors/<slug>/memory/*.md`. Visible only to that councillor at prompt-assembly time. Created exclusively by reflection (see below); edit and delete via the UI.
+
+Prompt assembly is top-K semantic retrieval against the sqlite-vec index — `MEMORY_TOPK_SHARED` shared hits + `MEMORY_TOPK_PRIVATE` private hits, capped by `MEMORY_CHAR_BUDGET` total characters (see `src/lib/server/config.ts`). If the index is empty or embedding fails, assembly falls back to "all shared notes verbatim." See [`docs/embeddings.md`](docs/embeddings.md) for chunk kinds and storage.
+
+### Reflection
+
+After a job transitions to `succeeded`, the runner makes one extra adapter call to the same councillor with a fixed reflection prompt (`src/lib/server/reflection.ts`). The prompt includes the job's `transcript.md` + `output.md` and asks for zero or more agent → host blocks (see [Agent Proposals](#agent-proposals)). Reflection is opt-out per councillor (`councillor.json` `reflect: boolean`, default `true`). Failed/cancelled jobs skip reflection. Reflection failure is non-fatal; it appends a `reflection_failed` event and leaves the job `succeeded`.
+
+### Agent Proposals
+
+Reflection (and, eventually, any adapter response slot the host chooses to scan) parses fenced blocks of the form:
+
+```
+<<MEMORY title="...">>
+body markdown
+<</MEMORY>>
+
+<<JOB title="..." councillor="optional-slug" priority="normal">>
+brief markdown
+<</JOB>>
+```
+
+- **`<<MEMORY>>`** — applied directly. Written to the councillor's private memory dir; indexed under `memory_private`. Title collisions get a `-2`, `-3` suffix. The block parser is regex-tolerant of leading whitespace and trailing prose; unrecognized tags are ignored (forward-compat).
+- **`<<JOB>>`** — lands as a *proposal*, not a direct mutation. The host writes `<council>/proposals/jobs/<timestamp>-<slug>.json` with `status: "pending"` and appends a `proposed_job` event to the source job. The director reviews at `/proposals` and approves (creating the job via the normal job-creation path) or rejects. Unknown `councillor` slugs are flagged in the review UI for reassignment before approval. The review-queue gate is the only loop-breaker; no automated cap in v1.
+
+Memory promotion (private → shared) is a known follow-up — design deferred until first real promote desire surfaces; both `<<PROMOTE>>` and `scope="shared"` on `<<MEMORY>>` are candidate forms.
+
+### Roster
+
+A terse auto-generated roster of every councillor — one line per councillor of the form `<slug> — <name> — <role> — <routing_hint>` — is injected into each prompt between the persona and the memory sections. Source: `listCouncillors()`. Self is included; the header is emitted even for a one-councillor council so the format stays stable. This is what makes `<<JOB councillor="other-slug">>` land on real slugs.
 
 ### Council Template
 
-A reusable, shareable definition of a council type — councillor roles, personas, default adapter expectations, and starter scaffolding. Templates must never contain user private data, operational history, business-specific facts, secrets, customer information, financial data, or other PII. v1 ships one built-in template: **Dogfood** (see below).
+A reusable, shareable definition of a council type — councillor roles, personas, default adapter expectations, and starter scaffolding. Single JSON file (`*.template.json`); see [`src/lib/server/templates.ts`](src/lib/server/templates.ts) for the schema. Templates must never contain user private data, operational history, business-specific facts, secrets, customer information, financial data, or other PII — the exporter enforces this through opt-in selection (councillors checked by default; memory and queued jobs unchecked).
+
+- **Install** — `npx landsraad init <source>` (URL or local path) or the `/import` route. Loader fetches with a 10s timeout, ≤2MB, ≤3 redirects. Preview-then-confirm: `planApply` returns adds/overwrites/skips; `applyTemplate` requires `confirmedOverwrite: true` if any overwrite is planned (otherwise throws `TemplateNeedsConfirmation`). Sample jobs are queued only when the council's `jobs/` directory is empty (so templates never pollute history). Run artifacts and `.index/` are never touched. The installed council's `template` field is set to `"<template.name>@<template.version>"` for provenance.
+- **Export** — `npx landsraad export <out.json>` or the `/export` route. Picker selects councillors / memory notes / queued jobs. Job artifacts (`input.md`, `transcript.md`, `output.md`, `events.jsonl`) are never exported.
+
+`templates/dogfood.template.json` is the in-repo built-in (replaces the previous imperative `scripts/dogfood-init.ts` seeder).
 
 ### Dogfood Council
 
@@ -97,13 +134,15 @@ A built-in council for testing Landsraad itself. The CLI command `npm run dogfoo
 ## v1 Functionality
 
 1. **Launch the app.** `npx landsraad` from the council directory (or `npm run dev` from the repo for development).
-2. **Create or edit the council.** If `council.json` is missing, `/` shows a setup form. Otherwise it's the council home.
-3. **Manage councillors.** CRUD on a councillor's name, role, persona, and adapter string.
+2. **Create or edit the council.** If `council.json` is missing, `/` shows a setup form with a blank-create option *and* an "Install from template" option. Otherwise it's the council home.
+3. **Manage councillors.** CRUD on a councillor's name, role, routing_hint, persona, adapter string, and `reflect` opt-out flag.
 4. **Manage shared memory.** CRUD on `*.md` notes under `memory/`.
 5. **Create and run jobs.** Pick a councillor, write a brief, submit. The runner picks up queued jobs and invokes the councillor's adapter. Status updates land on disk; the UI polls for live updates while a job is running.
-6. **Activity view.** The council page shows each councillor's recent jobs with status badges and timestamps.
-7. **Per-job artifacts.** Each run leaves `input.md` (the assembled prompt), `transcript.md` (raw adapter output), `output.md` (final response or summary), `events.jsonl` (state transitions), and `job.json` (metadata).
-8. **Seed a dogfood council.** `npm run dogfood:init [path]`.
+6. **Reflection.** Successful jobs trigger one extra adapter call that may emit `<<MEMORY>>` (applied directly to private memory) and `<<JOB>>` blocks (proposals).
+7. **Review proposals.** `/proposals` lists pending `<<JOB>>` proposals with approve / reject actions; approval routes through the same job-creation path as the UI.
+8. **Activity view.** The council page shows each councillor's recent jobs with status badges and timestamps.
+9. **Per-job artifacts.** Each run leaves `input.md` (the assembled prompt), `transcript.md` (raw adapter output), `output.md` (final response or summary), `events.jsonl` (state transitions), and `job.json` (metadata, including `memory_slugs` for reflection-created entries).
+10. **Install / export templates.** `npx landsraad init <source>` and `npx landsraad export <out.json>` (or `/import` and `/export` in the UI). `npm run dogfood:init` installs `templates/dogfood.template.json` into `./dogfood`.
 
 ## Storage Model
 
@@ -111,20 +150,25 @@ The council root is the current working directory of the Landsraad process. Over
 
 ```
 <council-root>/                  # = process.cwd() (or LANDSRAAD_COUNCIL_ROOT)
-  council.json
+  council.json                   # slug, name, description, template, created_at
   councillors/
     <councillor-slug>/
-      councillor.json            # name, role, adapter, created_at
+      councillor.json            # slug, name, role, routing_hint, adapter, reflect, created_at
       persona.md
+      memory/                    # private per-councillor memory
+        <entry-slug>.md
   memory/
     <note-slug>.md               # shared notes
   jobs/
     <job-id>/                    # job-id is timestamped + slugged
-      job.json                   # id, title, councillor_slug, status, *_at fields, exit_code?
+      job.json                   # id, title, councillor_slug, status, *_at, exit_code?, memory_slugs?
       input.md                   # assembled prompt sent to the adapter
       transcript.md              # raw stdout (and stderr) from the adapter
       output.md                  # final response (often === transcript.md, possibly trimmed)
       events.jsonl               # one line per state transition or progress event
+  proposals/
+    jobs/
+      <timestamp>-<slug>.json    # <<JOB>> proposals; status pending|approved|rejected
   .index/
     embeddings.db                # sqlite-vec index; regenerable
 ```
@@ -145,15 +189,19 @@ The app never writes outside the council root. It never writes secrets to disk. 
 
 | Route | Purpose |
 |---|---|
-| `/` | Setup form (no `council.json`) or council home (metadata · councillors · activity · jobs · memory) |
+| `/` | Setup form (no `council.json`, blank-create or install-template) or council home (metadata · councillors · activity · jobs · memory · pending-proposal badge) |
 | `/edit` | Edit council |
 | `/councillors/new` | Add councillor |
-| `/councillors/[c-slug]` | View councillor + their jobs |
+| `/councillors/[c-slug]` | View councillor + their jobs + private memory |
 | `/councillors/[c-slug]/edit` | Edit councillor |
-| `/memory/new` | Add memory note |
-| `/memory/[note]` | View / edit memory note |
+| `/councillors/[c-slug]/memory/[note]` | View / edit private memory entry |
+| `/memory/new` | Add shared memory note |
+| `/memory/[note]` | View / edit shared memory note |
 | `/jobs/new` | Create job |
-| `/jobs/[jid]` | Job detail: brief, transcript, output, status. Auto-refreshes while `running`. |
+| `/jobs/[jid]` | Job detail: brief, transcript, output, status, reflection-created memories, emitted proposals. Auto-refreshes while `running`. |
+| `/proposals` | Pending `<<JOB>>` proposals — approve / reject |
+| `/import` | Install a council template (URL, local path, or file upload) — preview then confirm |
+| `/export` | Export the current council to a `*.template.json` |
 
 A persistent header links back to `/`; the council home is the working surface.
 
@@ -162,15 +210,20 @@ A persistent header links back to `/`; the council home is the working surface.
 - SDK adapters (`sdk:anthropic`, `sdk:openai`, …)
 - Cron / recurring jobs / scheduler
 - Projects (a layer above jobs that group related work)
-- Per-councillor private memory
-- Retrieval index over memory
+- Memory promotion (private → shared) — design candidates (`<<PROMOTE>>` block vs. `<<MEMORY scope="shared">>`) are documented; pick after first real promote desire
+- Memory TTL / decay / consolidation (sleep/dream)
+- Promote-to-shared, auto-approval / per-councillor trust tiers, mid-job proposals, cross-council proposal sharing
+- Per-councillor reflection-prompt overrides
+- Memory-budget UI; per-job opt-out of memory inclusion
+- Authenticated template fetch, template registry / marketplace, single-action "publish to gist"
 - Permissions / audit log for risky tool use
-- Templates marketplace, multi-user, auth, remote hosting
+- Multi-user, auth, remote hosting
 
 ## Open Questions
 
-- Should memory inclusion be opt-in per job (a checkbox at submit) rather than always-on? Cheap to flip later.
-- How big is too big for memory before we need retrieval? Probably the first time a memory directory exceeds the adapter's context budget.
+- How big is too big for memory before retrieval starts dropping signal? Tune `MEMORY_TOPK_*` and `MEMORY_CHAR_BUDGET` empirically; expose UI if needed.
 - How should we surface CLI auth failures (e.g., `claude` returns "not logged in") so the director knows what to fix?
+- Should reflection ever run on `failed` or `cancelled` jobs (e.g., to capture "what went wrong" memories)?
+- Dedupe of repeated `<<JOB>>` proposals on the same `(title, source_councillor)`?
 
 These are flagged here so they aren't lost.

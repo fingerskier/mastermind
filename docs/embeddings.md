@@ -37,7 +37,7 @@ Deleting the council (rm `council.json`, `councillors/`, etc. — or removing th
 ```sql
 CREATE TABLE chunks (
   id           INTEGER PRIMARY KEY AUTOINCREMENT,
-  kind         TEXT NOT NULL,        -- 'memory' | 'job_input' | 'job_output' | 'transcript' | 'persona'
+  kind         TEXT NOT NULL,        -- 'memory' | 'memory_private' | 'job_input' | 'job_output' | 'transcript' | 'persona'
   ref_id       TEXT NOT NULL,        -- memory slug, job id, councillor slug
   chunk_idx    INTEGER NOT NULL DEFAULT 0,
   text         TEXT NOT NULL,
@@ -74,6 +74,7 @@ Examples:
 | Logical key | Source file |
 |---|---|
 | `memory/house-rules#0` | `<council>/memory/house-rules.md` |
+| `memory_private/q1-fcf-watchlist#0` | `<council>/councillors/cfo/memory/q1-fcf-watchlist.md` |
 | `job_input/2026-05-22T14-30-00Z-q1-summary#0` | `<council>/jobs/.../input.md` |
 | `job_output/2026-05-22T14-30-00Z-q1-summary#0` | `<council>/jobs/.../output.md` |
 | `transcript/2026-05-22T14-30-00Z-q1-summary#0` | `<council>/jobs/.../transcript.md` |
@@ -98,6 +99,8 @@ Useful for filtering search results (down-rank near-boilerplate hits) and for de
 |---|---|---|
 | `createNote` / `updateNote` | After `writeFile` | Upsert `memory/<slug>#0`. |
 | `deleteNote` | Before `rm` | Delete `memory/<slug>#*`. |
+| Private-memory create / update (reflection) | After `writeFile` | Upsert `memory_private/<entry-slug>#0` with `councillor_slug`. |
+| Private-memory delete | Before `rm` | Delete `memory_private/<entry-slug>#*`. |
 | `writeInput` | After `writeFile` | Upsert `job_input/<job-id>#0`. |
 | `writeOutput` | After `writeFile` | Upsert `job_output/<job-id>#0`. Also embed transcript if non-empty: `transcript/<job-id>#0`. |
 | `setStatus('succeeded' \| 'failed' \| 'cancelled')` | After write | Re-embed output (transcript may have grown since `writeInput`). |
@@ -112,7 +115,7 @@ Hooks are best-effort: an embedding failure logs but does not abort the user-fac
 npm run reindex -- <council-root>
 ```
 
-Walks `<council-root>/memory/`, `<council-root>/councillors/*/persona.md`, and `<council-root>/jobs/*/{input,output,transcript}.md`. For each file:
+Walks `<council-root>/memory/`, `<council-root>/councillors/*/persona.md`, `<council-root>/councillors/*/memory/*.md`, and `<council-root>/jobs/*/{input,output,transcript}.md`. For each file:
 
 1. Compute `text_hash`. If a chunk row exists with the same hash, skip.
 2. Otherwise embed, upsert chunk + vector, update `source_mtime`.
