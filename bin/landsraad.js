@@ -37,6 +37,8 @@ if (sub === 'init') {
   runBundled('build/cli/template-install.mjs');
 } else if (sub === 'export') {
   runBundled('build/cli/template-export.mjs');
+} else if (sub === 'reset') {
+  runBundled('build/cli/reset.mjs');
 } else {
   runBundled('build/index.js');
 }

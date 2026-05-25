@@ -60,6 +60,22 @@ describe('council', () => {
     await deleteCouncilData();
     expect(hasCouncil()).toBe(false);
   });
+
+  it('wipes every standard council subdir on reset', async () => {
+    const { writeFile, mkdir } = await import('node:fs/promises');
+    const { existsSync } = await import('node:fs');
+    await createCouncil({ name: 'ToWipe' });
+    const subs = ['councillors', 'memory', 'jobs', '.index', 'proposals'];
+    for (const s of subs) {
+      await mkdir(join(tmpRoot, s), { recursive: true });
+      await writeFile(join(tmpRoot, s, 'sentinel.txt'), 'x', 'utf8');
+    }
+    await deleteCouncilData();
+    for (const s of subs) {
+      expect(existsSync(join(tmpRoot, s))).toBe(false);
+    }
+    expect(hasCouncil()).toBe(false);
+  });
 });
 
 describe('councillors', () => {

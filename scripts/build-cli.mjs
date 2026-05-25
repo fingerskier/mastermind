@@ -7,7 +7,8 @@ const repoRoot = resolve(here, '..');
 
 const entries = [
   { in: 'scripts/template-install.ts', out: 'build/cli/template-install.mjs' },
-  { in: 'scripts/template-export.ts', out: 'build/cli/template-export.mjs' }
+  { in: 'scripts/template-export.ts', out: 'build/cli/template-export.mjs' },
+  { in: 'scripts/reset.ts', out: 'build/cli/reset.mjs' }
 ];
 
 await Promise.all(
