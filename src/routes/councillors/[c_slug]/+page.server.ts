@@ -1,7 +1,11 @@
 import { error, fail, redirect } from '@sveltejs/kit';
+import { join } from 'node:path';
+import { existsSync } from 'node:fs';
 import { deleteCouncillor, readCouncillor, updateCouncillor } from '$lib/server/councillors';
 import { listKnownAdapters } from '$lib/server/adapters';
 import { listPrivateNotes } from '$lib/server/memory_private';
+import { councillorDir } from '$lib/server/paths';
+import { openInDefaultEditor } from '$lib/server/open_editor';
 import type { Actions, PageServerLoad } from './$types';
 
 export const load: PageServerLoad = async ({ params }) => {
@@ -42,5 +46,18 @@ export const actions: Actions = {
       return fail(400, { error: message });
     }
     return { adapterSaved: true };
+  },
+  openPersona: async ({ params }) => {
+    const personaPath = join(councillorDir(params.c_slug), 'persona.md');
+    if (!existsSync(personaPath)) {
+      return fail(404, { error: 'persona.md not found for this councillor.' });
+    }
+    try {
+      openInDefaultEditor(personaPath);
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Failed to open persona in editor.';
+      return fail(500, { error: message });
+    }
+    return { personaOpened: true };
   }
 };
