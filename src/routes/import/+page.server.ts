@@ -1,6 +1,7 @@
 import { fail, redirect } from '@sveltejs/kit';
 import {
   applyTemplate,
+  listBundledTemplates,
   loadTemplate,
   parseTemplate,
   TemplateFetchError,
@@ -10,7 +11,11 @@ import {
   type ApplyPlan,
   type CouncilTemplate
 } from '$lib/server/templates';
-import type { Actions } from './$types';
+import type { Actions, PageServerLoad } from './$types';
+
+export const load: PageServerLoad = async () => {
+  return { bundled: await listBundledTemplates() };
+};
 
 const MAX_UPLOAD_BYTES = 2 * 1024 * 1024;
 

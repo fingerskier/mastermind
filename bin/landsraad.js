@@ -27,7 +27,7 @@ function runBundled(relPath) {
   }
   const child = spawn(process.execPath, [entry, ...rest], {
     stdio: 'inherit',
-    env: process.env,
+    env: { ...process.env, LANDSRAAD_PKG_ROOT: repoRoot },
     cwd: process.cwd()
   });
   child.on('exit', (code) => process.exit(code ?? 0));

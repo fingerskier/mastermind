@@ -57,15 +57,14 @@ export const actions: Actions = {
     const form = await request.formData();
     const name = String(form.get('name') ?? '').trim();
     const description = String(form.get('description') ?? '').trim();
-    const template = String(form.get('template') ?? '').trim() || null;
 
-    if (!name) return fail(400, { name, description, template, error: 'Name is required.' });
+    if (!name) return fail(400, { name, description, error: 'Name is required.' });
 
     try {
-      await createCouncil({ name, description, template });
+      await createCouncil({ name, description, template: null });
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Failed to create council.';
-      return fail(400, { name, description, template, error: message });
+      return fail(400, { name, description, error: message });
     }
     return { created: true };
   },

@@ -211,8 +211,10 @@ export function parseTemplate(jsonString: string): CouncilTemplate {
   return validateTemplate(raw);
 }
 
-import { readFile } from 'node:fs/promises';
+import { readFile, readdir } from 'node:fs/promises';
+import { join } from 'node:path';
 import { Buffer } from 'node:buffer';
+import { bundledTemplatesDir } from './paths';
 
 const MAX_BODY_BYTES = 2 * 1024 * 1024;
 const FETCH_TIMEOUT_MS = 10_000;
@@ -261,6 +263,41 @@ async function fetchTemplateText(url: string): Promise<string> {
 export async function loadTemplate(source: string): Promise<CouncilTemplate> {
   const text = isUrl(source) ? await fetchTemplateText(source) : await readFile(source, 'utf8');
   return parseTemplate(text);
+}
+
+export interface BundledTemplate {
+  slug: string;
+  name: string;
+  description?: string;
+  source: string;
+}
+
+export async function listBundledTemplates(): Promise<BundledTemplate[]> {
+  const dir = bundledTemplatesDir();
+  let entries: string[];
+  try {
+    entries = await readdir(dir);
+  } catch {
+    return [];
+  }
+  const out: BundledTemplate[] = [];
+  for (const file of entries) {
+    if (!file.endsWith('.template.json')) continue;
+    const full = join(dir, file);
+    try {
+      const t = parseTemplate(await readFile(full, 'utf8'));
+      out.push({
+        slug: file.slice(0, -'.template.json'.length),
+        name: t.name,
+        description: t.description,
+        source: full
+      });
+    } catch {
+      // skip malformed bundled template
+    }
+  }
+  out.sort((a, b) => a.name.localeCompare(b.name));
+  return out;
 }
 
 import { hasCouncil, createCouncil, updateCouncil, readCouncil } from './councils';

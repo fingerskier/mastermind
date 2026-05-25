@@ -5,6 +5,14 @@ export function councilRoot(): string {
   return env.LANDSRAAD_COUNCIL_ROOT || cwd();
 }
 
+export function pkgRoot(): string {
+  return env.LANDSRAAD_PKG_ROOT || cwd();
+}
+
+export function bundledTemplatesDir(): string {
+  return join(pkgRoot(), 'example');
+}
+
 export function councilFile(): string {
   return join(councilRoot(), 'council.json');
 }

@@ -35,10 +35,6 @@
         <span>Description</span>
         <textarea name="description" rows="3" maxlength="500">{form?.description ?? ''}</textarea>
       </label>
-      <label>
-        <span>Template <em>(optional)</em></span>
-        <input name="template" maxlength="500" value={form?.template ?? ''} placeholder="e.g. c-suite, hedge-fund, or template URL" />
-      </label>
       <div class="actions">
         <button type="submit" class="btn primary">Create council</button>
       </div>

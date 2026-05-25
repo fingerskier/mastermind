@@ -25,6 +25,7 @@
   "files": [
     "bin",
     "build",
+    "example",
     "templates"
   ],
   "devDependencies": {

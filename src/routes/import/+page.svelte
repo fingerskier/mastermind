@@ -1,6 +1,7 @@
 <script lang="ts">
-  import type { ActionData } from './$types';
-  let { form }: { form: ActionData } = $props();
+  import type { ActionData, PageData } from './$types';
+  let { data, form }: { data: PageData; form: ActionData } = $props();
+  let bundledSlug = $state('');
 </script>
 
 <section>
@@ -9,6 +10,25 @@
   {#if form?.error}<div class="error">{form.error}</div>{/if}
 
   {#if !form?.preview}
+    {#if data.bundled.length > 0}
+      <form method="POST" action="?/preview" class="form">
+        <label>
+          <span>Bundled template</span>
+          <select name="source" bind:value={bundledSlug}>
+            <option value="" disabled>— pick one —</option>
+            {#each data.bundled as t (t.slug)}
+              <option value={t.source}>{t.name}{t.description ? ` — ${t.description}` : ''}</option>
+            {/each}
+          </select>
+        </label>
+        <div class="actions">
+          <button type="submit" class="btn primary" disabled={!bundledSlug}>Preview bundled</button>
+          <a href="/" class="btn">Cancel</a>
+        </div>
+      </form>
+      <p class="meta or-line">— or use a custom source —</p>
+    {/if}
+
     <form method="POST" action="?/preview" enctype="multipart/form-data" class="form">
       <label>
         <span>URL or local path</span>
@@ -21,7 +41,9 @@
       </label>
       <div class="actions">
         <button type="submit" class="btn primary">Preview</button>
-        <a href="/" class="btn">Cancel</a>
+        {#if data.bundled.length === 0}
+          <a href="/" class="btn">Cancel</a>
+        {/if}
       </div>
     </form>
   {:else}
@@ -54,10 +76,11 @@
   .form { display: grid; gap: 1rem; max-width: 560px; margin-top: 1rem; }
   label { display: grid; gap: 0.35rem; }
   label > span { color: var(--muted); font-size: 0.9em; }
-  input[type="text"], input:not([type]) {
+  input[type="text"], input:not([type]), select {
     background: #1a1d24; color: var(--fg);
     border: 1px solid var(--border); border-radius: 6px; padding: 0.55rem 0.7rem;
   }
+  .or-line { text-align: center; max-width: 560px; margin: 1.25rem 0; }
   .actions { display: flex; gap: 0.5rem; }
   .meta { color: var(--muted); font-size: 0.9em; margin: 0; }
   .error { background: rgba(210,114,114,0.15); border: 1px solid var(--danger); color: var(--danger); padding: 0.6rem 0.8rem; border-radius: 6px; }
