@@ -11,6 +11,15 @@
   const personaHtml = $derived(
     c.persona.trim() ? (marked.parse(c.persona, { async: false, gfm: true, breaks: false }) as string) : ''
   );
+
+  let personaOpenedFlash = $state(false);
+  $effect(() => {
+    if (form?.personaOpened) {
+      personaOpenedFlash = true;
+      const t = setTimeout(() => { personaOpenedFlash = false; }, 3000);
+      return () => clearTimeout(t);
+    }
+  });
 </script>
 
 <p><a href="/">&larr; Back to council</a></p>
@@ -62,7 +71,7 @@
       <button class="btn" type="submit" title="Open persona.md in your default editor">Edit</button>
     </form>
   </div>
-  {#if form?.personaOpened}<p class="saved">Opening persona.md in your default editor…</p>{/if}
+  {#if personaOpenedFlash}<p class="saved flash">Opening persona.md in your default editor…</p>{/if}
   {#if personaHtml}
     <div class="persona-md">{@html personaHtml}</div>
   {:else}
@@ -107,6 +116,14 @@
   .note { color: var(--muted); font-size: 0.85em; margin: 0.5rem 0 0; }
   .error { color: var(--danger); margin: 0.5rem 0 0; }
   .saved { color: #8bb98b; margin: 0.5rem 0 0; }
+  .flash { animation: flash-fade 3s ease-out forwards; }
+  @keyframes flash-fade {
+    0%, 70% { opacity: 1; }
+    100% { opacity: 0; }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .flash { animation: none; }
+  }
   .sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0,0,0,0); white-space: nowrap; border: 0; }
   .section-head { display: flex; align-items: center; justify-content: space-between; gap: 1rem; }
   .section-head h2 { margin: 1rem 0 0.5rem; }
