@@ -210,3 +210,51 @@ export function parseTemplate(jsonString: string): CouncilTemplate {
   }
   return validateTemplate(raw);
 }
+
+import { readFile } from 'node:fs/promises';
+import { Buffer } from 'node:buffer';
+
+const MAX_BODY_BYTES = 2 * 1024 * 1024;
+const FETCH_TIMEOUT_MS = 10_000;
+
+function isUrl(source: string): boolean {
+  return /^https?:\/\//i.test(source);
+}
+
+async function readStreamCapped(stream: ReadableStream<Uint8Array>): Promise<string> {
+  const reader = stream.getReader();
+  const chunks: Uint8Array[] = [];
+  let total = 0;
+  while (true) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    total += value.byteLength;
+    if (total > MAX_BODY_BYTES) {
+      try { await reader.cancel(); } catch { /* ignore */ }
+      throw new TemplateFetchError(`Body exceeds 2 MB cap (got > ${total} bytes).`);
+    }
+    chunks.push(value);
+  }
+  return new TextDecoder('utf-8').decode(Buffer.concat(chunks));
+}
+
+async function fetchTemplateText(url: string): Promise<string> {
+  let res: Response;
+  try {
+    res = await fetch(url, {
+      signal: AbortSignal.timeout(FETCH_TIMEOUT_MS),
+      redirect: 'follow'
+    });
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : String(err);
+    throw new TemplateFetchError(`Failed to fetch ${url}: ${msg}`);
+  }
+  if (!res.ok) throw new TemplateFetchError(`HTTP ${res.status} from ${url}`);
+  if (!res.body) throw new TemplateFetchError(`Empty response from ${url}`);
+  return readStreamCapped(res.body);
+}
+
+export async function loadTemplate(source: string): Promise<CouncilTemplate> {
+  const text = isUrl(source) ? await fetchTemplateText(source) : await readFile(source, 'utf8');
+  return parseTemplate(text);
+}
