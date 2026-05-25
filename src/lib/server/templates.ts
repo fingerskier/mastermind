@@ -274,13 +274,12 @@ function memoryNoteSlug(n: TemplateMemoryNote): string {
 
 export async function planApply(t: CouncilTemplate): Promise<ApplyPlan> {
   const exists = hasCouncil();
-  const existingCouncillorSlugs = exists
-    ? new Set((await listCouncillors()).map((c) => c.slug))
-    : new Set<string>();
-  const existingMemorySlugs = exists
-    ? new Set((await listNotes()).map((n) => n.slug))
-    : new Set<string>();
-  const jobsCount = exists ? (await listJobs()).length : 0;
+  const [councillors, notes, jobs] = exists
+    ? await Promise.all([listCouncillors(), listNotes(), listJobs()])
+    : [[], [], []];
+  const existingCouncillorSlugs = new Set(councillors.map((c) => c.slug));
+  const existingMemorySlugs = new Set(notes.map((n) => n.slug));
+  const jobsCount = jobs.length;
 
   const cAdd: string[] = [];
   const cOver: string[] = [];
