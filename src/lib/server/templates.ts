@@ -225,15 +225,19 @@ async function readStreamCapped(stream: ReadableStream<Uint8Array>): Promise<str
   const reader = stream.getReader();
   const chunks: Uint8Array[] = [];
   let total = 0;
-  while (true) {
-    const { done, value } = await reader.read();
-    if (done) break;
-    total += value.byteLength;
-    if (total > MAX_BODY_BYTES) {
-      try { await reader.cancel(); } catch { /* ignore */ }
-      throw new TemplateFetchError(`Body exceeds 2 MB cap (got > ${total} bytes).`);
+  try {
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      total += value.byteLength;
+      if (total > MAX_BODY_BYTES) {
+        try { await reader.cancel(); } catch { /* ignore */ }
+        throw new TemplateFetchError(`Body exceeds 2 MB cap (got > ${total} bytes).`);
+      }
+      chunks.push(value);
     }
-    chunks.push(value);
+  } finally {
+    try { reader.releaseLock(); } catch { /* lock already released by cancel */ }
   }
   return new TextDecoder('utf-8').decode(Buffer.concat(chunks));
 }
