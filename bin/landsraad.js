@@ -14,33 +14,29 @@ const repoRoot = resolve(here, '..');
 
 const [, , sub, ...rest] = process.argv;
 
-function runScript(scriptRel) {
-  const child = spawn(
-    process.execPath,
-    [resolve(repoRoot, 'node_modules', 'vite-node', 'vite-node.mjs'), scriptRel, '--', ...rest],
-    { stdio: 'inherit', env: process.env, cwd: process.cwd() }
-  );
+function runBundled(relPath) {
+  const entry = resolve(repoRoot, relPath);
+  if (!existsSync(entry)) {
+    console.error(
+      `Landsraad has not been built yet (missing ${relPath}).\n` +
+        'From the repo root, run:\n' +
+        '  npm install\n' +
+        '  npm run build'
+    );
+    process.exit(1);
+  }
+  const child = spawn(process.execPath, [entry, ...rest], {
+    stdio: 'inherit',
+    env: process.env,
+    cwd: process.cwd()
+  });
   child.on('exit', (code) => process.exit(code ?? 0));
 }
 
 if (sub === 'init') {
-  runScript(resolve(repoRoot, 'scripts', 'template-install.ts'));
+  runBundled('build/cli/template-install.mjs');
 } else if (sub === 'export') {
-  runScript(resolve(repoRoot, 'scripts', 'template-export.ts'));
+  runBundled('build/cli/template-export.mjs');
 } else {
-  // Default: start the server.
-  const buildEntry = resolve(repoRoot, 'build', 'index.js');
-  if (!existsSync(buildEntry)) {
-    console.error(
-      'Landsraad has not been built yet.\n' +
-        'From the repo root, run:\n' +
-        '  npm install\n' +
-        '  npm run build\n' +
-        '  npm start\n\n' +
-        'Or for development: npm run dev'
-    );
-    process.exit(1);
-  }
-  const child = spawn(process.execPath, [buildEntry], { stdio: 'inherit', env: process.env });
-  child.on('exit', (code) => process.exit(code ?? 0));
+  runBundled('build/index.js');
 }

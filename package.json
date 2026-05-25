@@ -8,12 +8,14 @@
   },
   "scripts": {
     "dev": "vite dev",
-    "build": "vite build",
+    "build": "vite build && npm run build:cli",
+    "build:cli": "node scripts/build-cli.mjs",
     "preview": "vite preview",
     "start": "node build/index.js",
     "check": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json",
     "test": "vitest run",
     "test:watch": "vitest",
+    "prepublishOnly": "npm run build",
     "dogfood:init": "vite-node scripts/template-install.ts -- templates/dogfood.template.json --target ./dogfood --yes",
     "template:install": "vite-node scripts/template-install.ts --",
     "template:export": "vite-node scripts/template-export.ts --",
@@ -22,8 +24,6 @@
   "files": [
     "bin",
     "build",
-    "scripts",
-    "static",
     "templates"
   ],
   "devDependencies": {
@@ -31,6 +31,7 @@
     "@sveltejs/kit": "^2.15.0",
     "@sveltejs/vite-plugin-svelte": "^5.0.3",
     "@types/node": "^22.10.0",
+    "esbuild": "^0.25.0",
     "svelte": "^5.16.0",
     "svelte-check": "^4.1.4",
     "typescript": "^5.7.2",
