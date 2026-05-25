@@ -14,7 +14,9 @@
     "check": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json",
     "test": "vitest run",
     "test:watch": "vitest",
-    "dogfood:init": "vite-node scripts/dogfood-init.ts",
+    "dogfood:init": "vite-node scripts/template-install.ts -- templates/dogfood.template.json --target ./dogfood --yes",
+    "template:install": "vite-node scripts/template-install.ts --",
+    "template:export": "vite-node scripts/template-export.ts --",
     "reindex": "vite-node scripts/reindex.ts"
   },
   "files": [

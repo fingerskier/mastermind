@@ -1,0 +1,38 @@
+{
+  "format_version": 1,
+  "name": "Dogfood",
+  "version": "1.0.0",
+  "description": "Built-in council used to exercise Landsraad locally.",
+  "license": "MIT",
+  "council": {
+    "name": "Dogfood",
+    "description": "Built-in council used to exercise Landsraad locally."
+  },
+  "councillors": [
+    {
+      "name": "Mocky",
+      "role": "Echo test councillor",
+      "adapter": "mock:local",
+      "persona": "You are Mocky, a mock councillor that simply echoes its prompt back. Useful for end-to-end verification."
+    },
+    {
+      "name": "Polly",
+      "role": "Second mock councillor",
+      "adapter": "mock:local",
+      "persona": "You are Polly. You acknowledge requests succinctly and confirm receipt."
+    }
+  ],
+  "memory": [
+    {
+      "title": "House Rules",
+      "body": "- Be concise.\n- Cite assumptions explicitly.\n- Never invent facts about the user.\n"
+    }
+  ],
+  "sample_jobs": [
+    {
+      "title": "Hello world",
+      "brief": "Greet the council in one short paragraph.",
+      "councillor_slug": "mocky"
+    }
+  ]
+}
