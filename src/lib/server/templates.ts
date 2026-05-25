@@ -263,10 +263,10 @@ export async function loadTemplate(source: string): Promise<CouncilTemplate> {
   return parseTemplate(text);
 }
 
-import { hasCouncil, createCouncil, updateCouncil } from './councils';
-import { listCouncillors, createCouncillor, updateCouncillor } from './councillors';
-import { listNotes, createNote, updateNote } from './memory';
-import { listJobs, createJob } from './jobs';
+import { hasCouncil, createCouncil, updateCouncil, readCouncil } from './councils';
+import { listCouncillors, createCouncillor, updateCouncillor, readCouncillor } from './councillors';
+import { listNotes, createNote, updateNote, readNote } from './memory';
+import { listJobs, createJob, readJob } from './jobs';
 
 function memoryNoteSlug(n: TemplateMemoryNote): string {
   return slugify(n.title);
@@ -388,4 +388,70 @@ export async function applyTemplate(
   }
 
   return plan;
+}
+
+// ---------- export selection ----------
+
+export interface ExportSelection {
+  council: {
+    name: string;
+    version: string;
+    description?: string;
+    author?: string;
+    license?: string;
+  };
+  councillor_slugs: string[];
+  memory_slugs: string[];
+  sample_job_ids: string[];
+}
+
+export async function exportSelection(s: ExportSelection): Promise<CouncilTemplate> {
+  const current = await readCouncil();
+
+  const councillors: TemplateCouncillor[] = [];
+  for (const slug of s.councillor_slugs) {
+    const c = await readCouncillor(slug);
+    councillors.push({
+      slug: c.slug,
+      name: c.name,
+      role: c.role,
+      routing_hint: c.routing_hint || undefined,
+      adapter: c.adapter,
+      persona: c.persona,
+      reflect: c.reflect
+    });
+  }
+
+  const memory: TemplateMemoryNote[] = [];
+  for (const slug of s.memory_slugs) {
+    const n = await readNote(slug);
+    memory.push({ title: n.title, body: n.body });
+  }
+
+  const sample_jobs: TemplateSampleJob[] = [];
+  for (const id of s.sample_job_ids) {
+    const j = await readJob(id);
+    if (j.status !== 'queued') continue; // never export run artifacts
+    sample_jobs.push({
+      title: j.title,
+      brief: j.brief,
+      councillor_slug: j.councillor_slug
+    });
+  }
+
+  return {
+    format_version: 1,
+    name: s.council.name,
+    version: s.council.version,
+    description: s.council.description,
+    author: s.council.author,
+    license: s.council.license,
+    council: {
+      name: s.council.name,
+      description: s.council.description ?? (current.description || undefined)
+    },
+    councillors,
+    memory: memory.length ? memory : undefined,
+    sample_jobs: sample_jobs.length ? sample_jobs : undefined
+  };
 }

@@ -197,6 +197,8 @@ import { readCouncillor, listCouncillors as listCs } from './councillors';
 import { readNote, listNotes as listN } from './memory';
 import { listJobs as listJ } from './jobs';
 import { applyTemplate, TemplateNeedsConfirmation } from './templates';
+import { exportSelection } from './templates';
+import { slugify } from './paths';
 
 describe('applyTemplate (empty cwd)', () => {
   let tmpRoot: string;
@@ -286,5 +288,75 @@ describe('applyTemplate (existing council, conflicts)', () => {
     expect(c.slug).toBe('test');
     expect(c.description).toBe('desc');
     expect(c.template).toBe('Test Council@0.1.0');
+  });
+});
+
+describe('exportSelection', () => {
+  let tmpRoot: string;
+  let prevEnv: string | undefined;
+  beforeEach(async () => {
+    prevEnv = process.env.LANDSRAAD_COUNCIL_ROOT;
+    tmpRoot = mkdtempSync(join(tmpdir(), 'ex-'));
+    process.env.LANDSRAAD_COUNCIL_ROOT = tmpRoot;
+    await createCouncil({ name: 'Source' });
+    await createCouncillor({ name: 'Mocky', role: 'r', adapter: 'mock:local', persona: 'p' });
+    await createCouncillor({ name: 'Polly', role: 'r2', adapter: 'mock:local', persona: 'p2' });
+    await createNote({ title: 'House Rules', body: '- rule\n' });
+    await createJob({ title: 'Sample', brief: 'do thing', councillor_slug: 'mocky' });
+  });
+  afterEach(() => {
+    rmSync(tmpRoot, { recursive: true, force: true });
+    if (prevEnv === undefined) delete process.env.LANDSRAAD_COUNCIL_ROOT;
+    else process.env.LANDSRAAD_COUNCIL_ROOT = prevEnv;
+  });
+
+  it('exports selected councillors, no memory, no jobs', async () => {
+    const t = await exportSelection({
+      council: { name: 'Exported', version: '0.1.0' },
+      councillor_slugs: ['mocky'],
+      memory_slugs: [],
+      sample_job_ids: []
+    });
+    expect(t.name).toBe('Exported');
+    expect(t.councillors.map((c) => c.slug ?? slugify(c.name))).toEqual(['mocky']);
+    expect(t.memory ?? []).toEqual([]);
+    expect(t.sample_jobs ?? []).toEqual([]);
+  });
+
+  it('includes only queued sample jobs that are selected', async () => {
+    const jobs = await listJ();
+    const sampleId = jobs[0].id;
+    const t = await exportSelection({
+      council: { name: 'Exported', version: '0.1.0' },
+      councillor_slugs: ['mocky'],
+      memory_slugs: [],
+      sample_job_ids: [sampleId]
+    });
+    expect(t.sample_jobs).toHaveLength(1);
+    expect(t.sample_jobs?.[0].title).toBe('Sample');
+    expect(t.sample_jobs?.[0].councillor_slug).toBe('mocky');
+  });
+
+  it('round-trip: export -> load -> apply into fresh cwd', async () => {
+    const exported = await exportSelection({
+      council: { name: 'RT', version: '0.1.0', description: 'rt' },
+      councillor_slugs: ['mocky', 'polly'],
+      memory_slugs: ['house-rules'],
+      sample_job_ids: []
+    });
+    const json = JSON.stringify(exported);
+
+    // Switch to a fresh cwd.
+    const freshRoot = mkdtempSync(join(tmpdir(), 'ex-fresh-'));
+    process.env.LANDSRAAD_COUNCIL_ROOT = freshRoot;
+    try {
+      const reparsed = parseTemplate(json);
+      await applyTemplate(reparsed, { confirmedOverwrite: false });
+      expect((await readCouncil()).name).toBe('RT');
+      expect((await listCs()).map((c) => c.slug).sort()).toEqual(['mocky', 'polly']);
+      expect((await listN()).map((n) => n.slug)).toEqual(['house-rules']);
+    } finally {
+      rmSync(freshRoot, { recursive: true, force: true });
+    }
   });
 });
