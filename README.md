@@ -41,6 +41,14 @@ npm run dogfood:init        # creates ./dogfood
 cd dogfood && npx landsraad # or LANDSRAAD_COUNCIL_ROOT=./dogfood npm run dev
 ```
 
+### Wipe the dev council
+
+```bash
+npm run reset               # same as `landsraad reset`, but uses repo source — no build/install needed
+```
+
+Honors `LANDSRAAD_COUNCIL_ROOT` (so `LANDSRAAD_COUNCIL_ROOT=./dogfood npm run reset` wipes the dogfood council).
+
 ## Configuration
 
 | Env var | Default | Purpose |
