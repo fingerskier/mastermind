@@ -16,6 +16,7 @@ export interface NewCouncillorInput {
   adapter?: string;
   persona?: string;
   reflect?: boolean;
+  slug?: string;
 }
 
 export interface UpdateCouncillorInput {
@@ -67,7 +68,7 @@ export async function readCouncillor(slug: string): Promise<Councillor> {
 
 export async function createCouncillor(input: NewCouncillorInput): Promise<Councillor> {
   if (!hasCouncil()) throw new Error('No council exists in the current directory.');
-  const slug = slugify(input.name);
+  const slug = slugify(input.slug?.trim() ? input.slug : input.name);
   const dir = councillorDir(slug);
   if (existsSync(dir)) throw new Error(`A councillor named "${input.name}" already exists.`);
 

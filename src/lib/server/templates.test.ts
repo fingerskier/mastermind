@@ -49,16 +49,26 @@ describe('parseTemplate', () => {
     expect(() => parseTemplate(JSON.stringify(bad))).toThrow(/sample_jobs\[0\]\.councillor_slug "ghost"/);
   });
 
-  it('rejects councillor slug that does not match slugify(name)', () => {
-    // createCouncillor derives slug from name; an explicit-but-divergent slug
-    // would silently write to the wrong dir. Enforce the invariant up front.
+  it('accepts an explicit custom slug that differs from slugify(name)', () => {
+    const good = {
+      ...validTemplate,
+      councillors: [
+        { slug: 'mock', name: 'Mocky', role: 'r', adapter: 'mock:local', persona: 'p' }
+      ],
+      sample_jobs: [{ title: 'Hi', brief: 'b', councillor_slug: 'mock' }]
+    };
+    const t = parseTemplate(JSON.stringify(good));
+    expect(t.councillors[0].slug).toBe('mock');
+  });
+
+  it('rejects a slug that is not in slug form (uppercase, spaces, etc.)', () => {
     const bad = {
       ...validTemplate,
       councillors: [
-        { slug: 'mismatched', name: 'Mocky', role: 'r', adapter: 'mock:local', persona: 'p' }
+        { slug: 'Not A Slug', name: 'Mocky', role: 'r', adapter: 'mock:local', persona: 'p' }
       ]
     };
-    expect(() => parseTemplate(JSON.stringify(bad))).toThrow(/councillors\[0\]\.slug "mismatched"/);
+    expect(() => parseTemplate(JSON.stringify(bad))).toThrow(/councillors\[0\]\.slug "Not A Slug"/);
   });
 
   it('throws TemplateValidationError on missing top-level field', () => {
@@ -212,6 +222,22 @@ describe('applyTemplate (empty cwd)', () => {
     rmSync(tmpRoot, { recursive: true, force: true });
     if (prevEnv === undefined) delete process.env.LANDSRAAD_COUNCIL_ROOT;
     else process.env.LANDSRAAD_COUNCIL_ROOT = prevEnv;
+  });
+
+  it('honors explicit custom slug when installing councillor', async () => {
+    const tmpl: CouncilTemplate = {
+      ...validTemplate,
+      councillors: [
+        { slug: 'mock', name: 'Mocky', role: 'echo', adapter: 'mock:local', persona: 'p' }
+      ],
+      memory: undefined,
+      sample_jobs: [{ title: 'Hi', brief: 'b', councillor_slug: 'mock' }]
+    };
+    await applyTemplate(tmpl, { confirmedOverwrite: false });
+    const cs = await listCs();
+    expect(cs.map((c) => c.slug)).toEqual(['mock']);
+    const jobs = await listJ();
+    expect(jobs[0].councillor_slug).toBe('mock');
   });
 
   it('creates council, councillors, memory, sample jobs', async () => {

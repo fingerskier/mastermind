@@ -112,9 +112,9 @@ function validateCouncillor(raw: unknown, path: string): TemplateCouncillor {
   const slug = optionalString(raw, path, 'slug');
   const routing_hint = optionalString(raw, path, 'routing_hint');
   const reflect = raw.reflect === undefined ? undefined : Boolean(raw.reflect);
-  if (slug && slug !== slugify(name)) {
+  if (slug && slug !== slugify(slug)) {
     throw new TemplateValidationError(
-      `${path}.slug ${JSON.stringify(slug)} must match slugify(name) = ${JSON.stringify(slugify(name))}.`
+      `${path}.slug ${JSON.stringify(slug)} is not a valid slug; expected ${JSON.stringify(slugify(slug))}.`
     );
   }
   return { name, role, adapter, persona, slug, routing_hint, reflect };
@@ -355,6 +355,7 @@ export async function applyTemplate(
       });
     } else {
       await createCouncillor({
+        slug,
         name: c.name,
         role: c.role,
         routing_hint: c.routing_hint,
