@@ -23,8 +23,11 @@ A v0 with no agent execution is mostly forms + a filesystem CRUD layer. SvelteKi
 - `src/lib/server/councillors.ts` — councillor CRUD (incl. `reflect` flag, `routing_hint`).
 - `src/lib/server/memory.ts` — shared-note CRUD.
 - `src/lib/server/memory_private.ts` — per-councillor private-memory CRUD + indexer integration (`kind: 'memory_private'`).
-- `src/lib/server/jobs.ts` — job CRUD + artifact I/O.
+- `src/lib/server/jobs.ts` — job CRUD + artifact I/O. Jobs carry an optional `spawned_by_schedule_id` so the UI can link a spawned job back to its declaration.
 - `src/lib/server/runner.ts` — in-process job scheduler; one running job per councillor. Also drives the post-success reflection pass and dispatches parsed blocks.
+- `src/lib/server/schedules.ts` — schedule CRUD + `*.events.jsonl` append log under `schedules/`.
+- `src/lib/server/cron.ts` — thin wrapper over `croner` (5-field, TZ-aware): `validateCron`, `nextFire`, `previewNext`.
+- `src/lib/server/scheduler.ts` — in-process tick loop (30s `setInterval`) booted from `hooks.server.ts`. `tickOnce` fires due schedules by calling `createJob` + `startJobInBackground` (unchanged runner). Reentrancy-guarded; skip-overlap when the prior spawned job is still `running` on the same councillor. `catchUp` runs once at startup, logs a single `missed_fires` per stale schedule, and advances `next_fire_at` — no replay. Bad-cron and missing-councillor errors are isolated to the offending schedule (`fire_error` event + disable).
 - `src/lib/server/reflection.ts` — reflection prompt builder + parser for `<<MEMORY>>` / `<<JOB>>` fenced blocks. Regex-tolerant of whitespace and trailing prose; unknown tags ignored.
 - `src/lib/server/proposals.ts` — `<<JOB>>` proposal CRUD under `proposals/jobs/` and the approve/reject flow (approval routes through the normal job-creation path).
 - `src/lib/server/roster.ts` — auto-generated council roster (`<slug> — <name> — <role> — <routing_hint>` lines) injected into every prompt.
@@ -71,4 +74,4 @@ When the next phase lands, expect to add:
 - Memory promotion (private → shared) — design candidates documented in `SPECIFICATION.md` and `docs/OPEN_QUESTIONS.md`.
 - Sleep/dream consolidation pass over memories.
 - `src/routes/api/runs/...` — SSE endpoints for live run feedback (today the UI polls).
-- A separate worker process for long-running schedulers / cron.
+- A separate worker process for the scheduler, if multi-user / multi-process becomes a concern (today the tick loop runs in the SvelteKit Node process).

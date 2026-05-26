@@ -1,6 +1,6 @@
 # Landsraad — Specification
 
-Status: v1 (council + councillor + jobs + shared & private memory + reflection + agent proposals + council templates + adapters + activity dashboard). High-level only. Implementation details live in `docs/` and in code.
+Status: v1 (council + councillor + jobs + shared & private memory + reflection + agent proposals + council templates + adapters + activity dashboard + schedules). High-level only. Implementation details live in `docs/` and in code.
 
 ---
 
@@ -18,7 +18,6 @@ Use more than one directory.
 
 ## TBD
 - No provider-native SDK code yet.  v1 invokes adapters as **subprocesses** (CLI tools).  SDK adapters land in a future spec.
-- cron / recurring jobs.  v1 jobs are one-shot.
 - No remote provider permission/auth orchestration. If a CLI needs login, the user logs in once outside Landsraad.
 
 ---
@@ -82,6 +81,12 @@ A unit of work the director gives to one councillor. A job has a brief (free-for
 
 Jobs are one-shot. To repeat a job, the director clones it. Jobs are scoped to one council.
 
+### Schedule
+
+A declaration that a job should be created at a future time (`kind: "once"`) or on a cron expression (`kind: "recurring"`). Schedules spawn jobs on the in-process tick loop (30s resolution) and otherwise leave the job lifecycle unchanged. Cron expressions are 5-field, interpreted in the system local TZ. Schedules with `enabled: false` do not fire. On `kind: "once"` fire, the schedule auto-disables and records `fired_at` + `last_fire_job_id`.
+
+If the app was down at a fire time, startup logs a single `missed_fires` event per stale schedule and advances `next_fire_at` to the next future occurrence — no replay. If a recurring fire is due but the prior spawned job is still `running` on the same councillor, the fire is skipped (`skipped_overlap` event) and `next_fire_at` advances.
+
 ### Memory
 
 Two tiers, both markdown on disk:
@@ -143,6 +148,7 @@ A built-in council for testing Landsraad itself. The CLI command `npm run dogfoo
 8. **Activity view.** The council page shows each councillor's recent jobs with status badges and timestamps.
 9. **Per-job artifacts.** Each run leaves `input.md` (the assembled prompt), `transcript.md` (raw adapter output), `output.md` (final response or summary), `events.jsonl` (state transitions), and `job.json` (metadata, including `memory_slugs` for reflection-created entries).
 10. **Install / export templates.** `npx landsraad init <source>` and `npx landsraad export <out.json>` (or `/import` and `/export` in the UI). `npm run dogfood:init` installs `templates/dogfood.template.json` into `./dogfood`.
+11. **Schedules.** Declare future or recurring work via `/schedules` (or "Save as schedule" on `/jobs/new`). The in-process scheduler ticks every 30s, spawning jobs on the configured councillor.
 
 ## Storage Model
 
@@ -169,6 +175,9 @@ The council root is the current working directory of the Landsraad process. Over
   proposals/
     jobs/
       <timestamp>-<slug>.json    # <<JOB>> proposals; status pending|approved|rejected
+  schedules/
+    <schedule-id>.json           # one declaration per file
+    <schedule-id>.events.jsonl   # fire / skip / error log
   .index/
     embeddings.db                # sqlite-vec index; regenerable
 ```
@@ -202,13 +211,19 @@ The app never writes outside the council root. It never writes secrets to disk. 
 | `/proposals` | Pending `<<JOB>>` proposals — approve / reject |
 | `/import` | Install a council template (URL, local path, or file upload) — preview then confirm |
 | `/export` | Export the current council to a `*.template.json` |
+| `/schedules` | List schedules; enable / disable; delete |
+| `/schedules/new` | Create a schedule |
+| `/schedules/[id]` | Schedule detail: definition, next-N fires, recent events, spawned job links |
+| `/schedules/[id]/edit` | Edit a schedule |
 
 A persistent header links back to `/`; the council home is the working surface.
 
 ## Out of Scope (will be specified later)
 
 - SDK adapters (`sdk:anthropic`, `sdk:openai`, …)
-- Cron / recurring jobs / scheduler
+- Per-schedule TZ; sub-minute resolution
+- Schedule proposals from reflection (`<<SCHEDULE …>>`)
+- Schedule export/import in council templates
 - Projects (a layer above jobs that group related work)
 - Memory promotion (private → shared) — design candidates (`<<PROMOTE>>` block vs. `<<MEMORY scope="shared">>`) are documented; pick after first real promote desire
 - Memory TTL / decay / consolidation (sleep/dream)

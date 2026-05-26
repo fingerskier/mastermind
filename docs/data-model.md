@@ -25,6 +25,9 @@ Everything is on-disk under the **council root**, which is the Landsraad process
   proposals/
     jobs/
       <timestamp>-<slug>.json  # <<JOB>> proposals
+  schedules/
+    <schedule-id>.json         # one declaration per file
+    <schedule-id>.events.jsonl # fire / skip / error log
   .index/
     embeddings.db
 ```
@@ -121,6 +124,34 @@ One markdown file per private memory entry. Same format as shared notes. Created
 ```
 
 `target_councillor` is `null` (unassigned), a councillor slug, or the literal `"all"` for a broadcast. `status` is `pending | approved | rejected`. Approved proposals add `decided_at`, `decided_by`, and `resulting_job_ids`. Rejected proposals add `decided_at`, `decided_by`, and an optional `reason`. Approved/rejected files stay on disk for audit; the review UI hides them from the pending view.
+
+## `schedules/<schedule-id>.json`
+
+```json
+{
+  "id": "2026-05-26T08-00-00Z-weekly-news",
+  "title": "Weekly news",
+  "brief": "...",
+  "councillor_slug": "analyst",
+  "kind": "recurring",
+  "fire_at": null,
+  "cron": "0 9 * * MON",
+  "enabled": true,
+  "next_fire_at": "2026-06-01T09:00:00.000Z",
+  "last_fire_job_id": null,
+  "fire_count": 0,
+  "fired_at": null,
+  "created_at": "2026-05-26T08:00:00.000Z"
+}
+```
+
+- `kind` — `"once"` (a single fire at `fire_at`) or `"recurring"` (5-field `cron`, system local TZ).
+- `enabled` — false suppresses firing and clears `next_fire_at`.
+- `next_fire_at` — recomputed after each fire, on enable/edit, and at startup catch-up.
+- `last_fire_job_id` / `fire_count` — bookkeeping for the most recent spawned job.
+- `fired_at` — set when a `kind: "once"` schedule auto-disables on its fire.
+
+Schedule IDs are `<UTC-timestamp>-<title-slug>` (mirrors job IDs). Side-channel: `<schedule-id>.events.jsonl` records `created | enabled | disabled | edited | fired | skipped_overlap | missed_fires | fire_error` lines as the schedule runs.
 
 ## Invariants
 
