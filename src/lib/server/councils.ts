@@ -68,7 +68,7 @@ export async function updateCouncil(input: UpdateCouncilInput): Promise<Council>
 
 export async function deleteCouncilData(): Promise<void> {
   const root = councilRoot();
-  for (const sub of ['council.json', 'councillors', 'memory', 'jobs', '.index', 'proposals']) {
+  for (const sub of ['council.json', 'councillors', 'memory', 'jobs', '.index', 'proposals', 'schedules']) {
     await rm(`${root}/${sub}`, { recursive: true, force: true });
   }
 }
