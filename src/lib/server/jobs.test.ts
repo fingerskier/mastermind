@@ -144,4 +144,25 @@ describe('jobs', () => {
       createJob({ title: 'x', brief: 'x', councillor_slug: 'x' })
     ).rejects.toThrow();
   });
+
+  it('createJob persists spawned_by_schedule_id when provided', async () => {
+    const j = await createJob({
+      title: 'Spawned',
+      brief: 'auto',
+      councillor_slug: 'cfo',
+      spawned_by_schedule_id: 'some-schedule-id'
+    });
+    expect(j.spawned_by_schedule_id).toBe('some-schedule-id');
+    const read = await readJob(j.id);
+    expect(read.spawned_by_schedule_id).toBe('some-schedule-id');
+  });
+
+  it('createJob defaults spawned_by_schedule_id to null', async () => {
+    const j = await createJob({
+      title: 'Manual',
+      brief: 'human',
+      councillor_slug: 'cfo'
+    });
+    expect(j.spawned_by_schedule_id ?? null).toBeNull();
+  });
 });

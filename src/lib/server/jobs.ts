@@ -16,6 +16,7 @@ export interface NewJobInput {
   title: string;
   brief: string;
   councillor_slug: string;
+  spawned_by_schedule_id?: string | null;
 }
 
 export async function createJob(input: NewJobInput, now: Date = new Date()): Promise<Job> {
@@ -38,7 +39,8 @@ export async function createJob(input: NewJobInput, now: Date = new Date()): Pro
     started_at: null,
     finished_at: null,
     exit_code: null,
-    error: null
+    error: null,
+    spawned_by_schedule_id: input.spawned_by_schedule_id ?? null
   };
 
   await mkdir(dir, { recursive: true });
