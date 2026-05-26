@@ -8,16 +8,15 @@
 
 ## 1. Motivation
 
-`SPECIFICATION.md` currently says jobs are one-shot and any scheduler is deferred. The director can already create jobs by hand; this spec adds the ability to declare *future* and *recurring* work, so a councillor can produce a Monday-morning briefing, a 15-minute health check, or a one-off reminder without the director re-clicking "create job."
+`SPECIFICATION.md` currently says jobs are one-shot and any scheduler is deferred.  The director can already create jobs by hand; this spec adds the ability to declare *future* and *recurring* work, so a councillor can produce a Monday-morning briefing, a 15-minute health check, or a one-off reminder without the director re-clicking "create job."
 
-The model assumes the Landsraad process is running when fires are due. Catch-up on startup is best-effort (single bookkeeping event, no replay).
+The model assumes the Landsraad process is running when fires are due.  Catch-up on startup is best-effort (single bookkeeping event, no replay).
 
 ## 2. Concepts
 
 **Schedule** — a new first-class entity that declares *Job X should fire at time T (once) or per cron (recurring)*. Schedules spawn Jobs. Jobs stay one-shot and otherwise unchanged.
 
 Two orthogonal lifecycles:
-
 - *Schedule:* created → enabled/disabled → fires repeatedly (or once) → optionally edited/deleted.
 - *Job:* spawned (or hand-created) → queued → running → succeeded/failed/cancelled. Identical to today.
 
