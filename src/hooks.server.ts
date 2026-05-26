@@ -2,6 +2,7 @@ import { env } from 'node:process';
 import type { Handle } from '@sveltejs/kit';
 import { xenovaEmbedder } from '$lib/server/embedder-xenova';
 import { setEmbedder } from '$lib/server/indexer';
+import { startScheduler, stopScheduler } from '$lib/server/scheduler';
 
 if (env.LANDSRAAD_EMBED !== '0') {
   try {
@@ -9,6 +10,17 @@ if (env.LANDSRAAD_EMBED !== '0') {
     console.log('[landsraad] embedder ready (Xenova/all-MiniLM-L6-v2)');
   } catch (err) {
     console.warn('[landsraad] embedder init failed; search disabled:', (err as Error).message);
+  }
+}
+
+if (env.LANDSRAAD_SCHEDULER !== '0') {
+  startScheduler().catch((err) => {
+    console.warn('[landsraad] scheduler start failed:', (err as Error).message);
+  });
+  for (const sig of ['SIGINT', 'SIGTERM'] as const) {
+    process.once(sig, () => {
+      stopScheduler();
+    });
   }
 }
 
