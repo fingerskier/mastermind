@@ -36,6 +36,7 @@ export interface Job {
   error: string | null;
   memory_slugs?: string[];
   reflection_error?: string;
+  spawned_by_schedule_id?: string | null;
 }
 
 export interface JobEvent {
@@ -79,4 +80,43 @@ export interface MemoryNote {
   title: string;
   body: string;
   updated_at: string;
+}
+
+export type ScheduleKind = 'once' | 'recurring';
+
+export interface Schedule {
+  id: string;
+  title: string;
+  brief: string;
+  councillor_slug: string;
+  kind: ScheduleKind;
+  fire_at: string | null;
+  cron: string | null;
+  enabled: boolean;
+  next_fire_at: string | null;
+  last_fire_job_id: string | null;
+  fire_count: number;
+  fired_at: string | null;
+  created_at: string;
+}
+
+export type ScheduleEventType =
+  | 'created'
+  | 'enabled'
+  | 'disabled'
+  | 'edited'
+  | 'fired'
+  | 'skipped_overlap'
+  | 'missed_fires'
+  | 'fire_error';
+
+export interface ScheduleEvent {
+  at: string;
+  type: ScheduleEventType;
+  message?: string;
+  job_id?: string;
+  prior_job_id?: string;
+  from?: string;
+  to?: string | null;
+  count?: number;
 }

@@ -73,3 +73,21 @@ export function proposalsDir(): string {
 export function jobProposalsDir(): string {
   return join(proposalsDir(), 'jobs');
 }
+
+export function schedulesDir(): string {
+  return join(councilRoot(), 'schedules');
+}
+
+export function scheduleFile(scheduleId: string): string {
+  return join(schedulesDir(), `${scheduleId}.json`);
+}
+
+export function scheduleEventsFile(scheduleId: string): string {
+  return join(schedulesDir(), `${scheduleId}.events.jsonl`);
+}
+
+export function scheduleIdFor(title: string, now: Date = new Date()): string {
+  const ts = now.toISOString().replace(/[:.]/g, '-');
+  const titleSlug = slugify(title);
+  return `${ts}-${titleSlug}`;
+}
