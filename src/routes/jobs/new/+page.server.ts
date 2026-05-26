@@ -1,4 +1,4 @@
-import { error, fail, redirect } from '@sveltejs/kit';
+import { error, fail, isRedirect, redirect } from '@sveltejs/kit';
 import { hasCouncil, readCouncilWithCouncillors } from '$lib/server/councils';
 import { createJob } from '$lib/server/jobs';
 import { startJobInBackground } from '$lib/server/runner';
@@ -103,7 +103,7 @@ export const actions: Actions = {
         });
         redirect(303, `/schedules/${s.id}`);
       } catch (err) {
-        if (err instanceof Response) throw err;
+        if (isRedirect(err)) throw err;
         return fail(400, { error: err instanceof Error ? err.message : 'Failed to create schedule.', title, brief, councillor_slugs: slugs, save_as,
           sched_cron: String(form.get('sched_cron') ?? ''),
           sched_fire_at: String(form.get('sched_fire_at') ?? '') });

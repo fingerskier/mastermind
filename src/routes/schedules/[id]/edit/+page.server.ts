@@ -1,4 +1,4 @@
-import { error, fail, redirect } from '@sveltejs/kit';
+import { error, fail, isRedirect, redirect } from '@sveltejs/kit';
 import { hasCouncil, readCouncilWithCouncillors } from '$lib/server/councils';
 import { readSchedule, updateSchedule } from '$lib/server/schedules';
 import { validateCron } from '$lib/server/cron';
@@ -53,7 +53,7 @@ export const actions: Actions = {
       });
       redirect(303, `/schedules/${params.id}`);
     } catch (err) {
-      if (err instanceof Response) throw err;
+      if (isRedirect(err)) throw err;
       return fail(400, { ...formState, error: err instanceof Error ? err.message : 'Failed to update schedule.' });
     }
   }
