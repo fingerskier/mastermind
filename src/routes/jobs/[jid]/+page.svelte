@@ -6,6 +6,7 @@
   let { data }: { data: PageData } = $props();
   const c = $derived(data.council);
   const job = $derived(data.job);
+  const fromSchedule = $derived(data.job.spawned_by_schedule_id ?? null);
 
   let timer: ReturnType<typeof setInterval> | null = null;
 
@@ -33,6 +34,9 @@
       · created {new Date(job.created_at).toLocaleString()}
       {#if job.exit_code !== null} · exit {job.exit_code}{/if}
     </p>
+    {#if fromSchedule}
+      <p class="meta">From schedule: <a href="/schedules/{fromSchedule}">{fromSchedule}</a></p>
+    {/if}
   </div>
   <div class="head-actions">
     {#if job.status === 'queued'}
