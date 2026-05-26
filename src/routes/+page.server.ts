@@ -9,6 +9,7 @@ import { listJobs, readOutputSlug } from '$lib/server/jobs';
 import { listNotes } from '$lib/server/memory';
 import { listJobProposals } from '$lib/server/proposals';
 import { currentRuns } from '$lib/server/runner';
+import { scheduleSummary } from '$lib/server/scheduler';
 import { councilRoot } from '$lib/server/paths';
 import type { Job } from '$lib/types';
 import type { Actions, PageServerLoad } from './$types';
@@ -22,10 +23,11 @@ export const load: PageServerLoad = async () => {
     return { hasCouncil: false as const, cwd: councilRoot() };
   }
   const council = await readCouncilWithCouncillors();
-  const [jobs, notes, pendingProposals] = await Promise.all([
+  const [jobs, notes, pendingProposals, schedules] = await Promise.all([
     listJobs(),
     listNotes(),
-    listJobProposals({ status: 'pending' })
+    listJobProposals({ status: 'pending' }),
+    scheduleSummary()
   ]);
   const running = new Set(currentRuns().map((r) => r.councillor));
   const recentByCouncillor: Record<string, RecentJob[]> = {};
@@ -48,7 +50,8 @@ export const load: PageServerLoad = async () => {
     notes,
     recentByCouncillor,
     running: Array.from(running),
-    pendingProposalCount: pendingProposals.length
+    pendingProposalCount: pendingProposals.length,
+    schedules
   };
 };
 

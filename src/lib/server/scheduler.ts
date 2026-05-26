@@ -203,3 +203,21 @@ export function _resetForTests(): void {
     interval = null;
   }
 }
+
+export interface ScheduleSummary {
+  active: number;
+  next_fire_at: string | null;
+  next_schedule_id: string | null;
+}
+
+export async function scheduleSummary(): Promise<ScheduleSummary> {
+  const all = await listSchedules();
+  const active = all.filter((s) => s.enabled && s.next_fire_at);
+  active.sort((a, b) => (a.next_fire_at! < b.next_fire_at! ? -1 : 1));
+  const head = active[0] ?? null;
+  return {
+    active: active.length,
+    next_fire_at: head?.next_fire_at ?? null,
+    next_schedule_id: head?.id ?? null
+  };
+}

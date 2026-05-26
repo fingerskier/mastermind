@@ -18,6 +18,17 @@
     const hue = 120 * (1 - t);
     return `hsl(${hue.toFixed(0)} 35% 20% / 0.28)`;
   }
+
+  function relTime(iso: string): string {
+    const diffMs = new Date(iso).getTime() - Date.now();
+    const abs = Math.abs(diffMs);
+    const min = Math.round(abs / 60000);
+    if (min < 60) return `${diffMs >= 0 ? 'in' : ''} ${min}m${diffMs < 0 ? ' ago' : ''}`.trim();
+    const hr = Math.round(abs / 3_600_000);
+    if (hr < 48) return `${diffMs >= 0 ? 'in' : ''} ${hr}h${diffMs < 0 ? ' ago' : ''}`.trim();
+    const days = Math.round(abs / 86_400_000);
+    return `${diffMs >= 0 ? 'in' : ''} ${days}d${diffMs < 0 ? ' ago' : ''}`.trim();
+  }
 </script>
 
 {#if !data.hasCouncil}
@@ -49,6 +60,7 @@
   {@const notes = data.notes}
   {@const running = new Set(data.running)}
   {@const recent = data.recentByCouncillor}
+  {@const sched = data.schedules}
 
   <header class="head">
     <div>
@@ -73,6 +85,16 @@
       </form>
     </div>
   </header>
+
+  <section class="schedules-line">
+    {#if sched.active === 0}
+      <a class="dim" href="/schedules">Schedules: none active</a>
+    {:else}
+      <a href="/schedules">
+        Schedules: {sched.active} active{#if sched.next_fire_at} · next fires {relTime(sched.next_fire_at)}{/if}
+      </a>
+    {/if}
+  </section>
 
   <section>
     <div class="section-head">
@@ -248,4 +270,8 @@
     background: rgba(255,255,255,0.02); text-decoration: none; font-weight: 600;
   }
   .badge:hover { background: var(--accent); color: #0f1115; }
+  .schedules-line { margin: -0.75rem 0 1.25rem; font-size: 0.9em; }
+  .schedules-line a { color: var(--accent); text-decoration: none; }
+  .schedules-line a:hover { text-decoration: underline; }
+  .schedules-line .dim { color: var(--muted); }
 </style>
