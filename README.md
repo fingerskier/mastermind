@@ -54,6 +54,9 @@ Honors `LANDSRAAD_COUNCIL_ROOT` (so `LANDSRAAD_COUNCIL_ROOT=./dogfood npm run re
 | Env var | Default | Purpose |
 |---|---|---|
 | `LANDSRAAD_COUNCIL_ROOT` | `process.cwd()` | The directory Landsraad treats as the council root. |
+| `PORT` | `10191` | Port the production server (`npx landsraad`) listens on. |
+
+When you run `npx landsraad`, the server opens your default browser to the council URL once it's listening. Set `PORT` (or any prior `PORT` env value) to override.
 
 ## Tests
 
