@@ -10,6 +10,7 @@ import { existsSync } from 'node:fs';
 import { spawn } from 'node:child_process';
 import { platform } from 'node:os';
 import { findFreePort } from './find-port.js';
+import { writeInstance, removeInstance } from './registry.js';
 
 const here = dirname(fileURLToPath(import.meta.url));
 const repoRoot = resolve(here, '..');
@@ -78,12 +79,50 @@ async function runBundled(relPath, { autoOpen = false } = {}) {
     cwd: process.cwd()
   });
 
+  let registered = false;
+  const cleanup = async () => {
+    if (!registered) return;
+    registered = false;
+    try {
+      await removeInstance(child.pid);
+    } catch {
+      // best-effort
+    }
+  };
+
+  if (autoOpen) {
+    const onSignal = () => {
+      try {
+        child.kill();
+      } catch {
+        // ignore
+      }
+    };
+    process.once('SIGINT', onSignal);
+    process.once('SIGTERM', onSignal);
+  }
+
   if (autoOpen && child.stdout) {
     let opened = false;
     child.stdout.on('data', (chunk) => {
       process.stdout.write(chunk);
-      if (opened) return;
       const text = chunk.toString();
+      if (!registered) {
+        const listenMatch = text.match(/Listening on\s+(https?:\/\/\S+)/i);
+        if (listenMatch) {
+          registered = true;
+          const portNum = Number.parseInt(env.PORT ?? '', 10);
+          writeInstance({
+            pid: child.pid,
+            port: Number.isInteger(portNum) ? portNum : null,
+            cwd: process.cwd(),
+            startedAt: new Date().toISOString()
+          }).catch(() => {
+            // best-effort registry write
+          });
+        }
+      }
+      if (opened) return;
       const match = text.match(/Listening on\s+(https?:\/\/\S+)/i);
       if (match) {
         opened = true;
@@ -96,7 +135,10 @@ async function runBundled(relPath, { autoOpen = false } = {}) {
     });
   }
 
-  child.on('exit', (code) => process.exit(code ?? 0));
+  child.on('exit', async (code) => {
+    await cleanup();
+    process.exit(code ?? 0);
+  });
 }
 
 let task;
