@@ -70,6 +70,14 @@ curl http://localhost:10191/api/instances
 
 The registry is shared via the file at `LANDSRAAD_INSTANCES_FILE`, so each instance sees the others. Crashed processes are pruned by PID liveness on every read.
 
+## API discovery
+
+`GET /api/openapi.json` returns an OpenAPI 3.1 document describing the JSON `/api/*` surface — handy for tooling, codegen, or quick discovery:
+
+```bash
+curl http://localhost:10191/api/openapi.json | jq .paths
+```
+
 ## Tests
 
 ```bash
