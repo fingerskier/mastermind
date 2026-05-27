@@ -110,13 +110,15 @@ describe('runner', () => {
   });
 
   it('reports currentRuns while a job is in flight', async () => {
-    const slow = createMockAdapter({ delayMs: 100 });
+    const slow = createMockAdapter({ delayMs: 500 });
     const j = await createJob({ title: 'Hold', brief: 'h', councillor_slug: 'mocky' });
     const adapterOverride = { id: slow.id, kind: 'mock' as const, run: slow.run };
     const p = runJobNow(j.id, { adapterOverride });
-    await new Promise((r) => setTimeout(r, 20));
-    const runs = currentRuns();
-    expect(runs.some((r) => r.jobId === j.id)).toBe(true);
+    const deadline = Date.now() + 2000;
+    while (Date.now() < deadline && !currentRuns().some((r) => r.jobId === j.id)) {
+      await new Promise((r) => setTimeout(r, 10));
+    }
+    expect(currentRuns().some((r) => r.jobId === j.id)).toBe(true);
     await p;
     expect(currentRuns().some((r) => r.jobId === j.id)).toBe(false);
   });
