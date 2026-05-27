@@ -27,6 +27,7 @@ interface ActiveRun {
 }
 
 const active = new Map<string, ActiveRun>();
+const pendingCancels = new Set<string>();
 
 export function currentRuns(): Array<{ councillor: string; jobId: string }> {
   return Array.from(active.entries()).map(([councillor, run]) => ({
@@ -47,6 +48,8 @@ export async function cancelJob(jobId: string): Promise<void> {
     }
     void key;
   }
+  // Job not yet registered (setup awaits still pending) — mark for cancellation on start.
+  pendingCancels.add(jobId);
 }
 
 export interface RunOptions {
@@ -173,6 +176,9 @@ export async function runJobNow(jobId: string, opts: RunOptions = {}): Promise<J
   }
 
   const controller = new AbortController();
+  if (pendingCancels.delete(jobId)) {
+    controller.abort();
+  }
   const prompt = await buildPrompt(job, councillor.persona);
   await writeInput(jobId, prompt);
 
@@ -243,6 +249,7 @@ export async function runJobNow(jobId: string, opts: RunOptions = {}): Promise<J
       });
     } finally {
       active.delete(councillor.slug);
+      pendingCancels.delete(jobId);
     }
   })();
 
