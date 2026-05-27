@@ -9,11 +9,13 @@ import { dirname, resolve } from 'node:path';
 import { existsSync } from 'node:fs';
 import { spawn } from 'node:child_process';
 import { platform } from 'node:os';
+import { findFreePort } from './find-port.js';
 
 const here = dirname(fileURLToPath(import.meta.url));
 const repoRoot = resolve(here, '..');
 
-const DEFAULT_PORT = '10191';
+const DEFAULT_PORT = 10191;
+const PORT_SCAN_RANGE = 100;
 
 const [, , sub, ...rest] = process.argv;
 
@@ -40,7 +42,7 @@ function openInBrowser(url) {
   }
 }
 
-function runBundled(relPath, { autoOpen = false } = {}) {
+async function runBundled(relPath, { autoOpen = false } = {}) {
   const entry = resolve(repoRoot, relPath);
   if (!existsSync(entry)) {
     console.error(
@@ -53,7 +55,20 @@ function runBundled(relPath, { autoOpen = false } = {}) {
   }
 
   const env = { ...process.env, LANDSRAAD_PKG_ROOT: repoRoot };
-  if (autoOpen && !env.PORT) env.PORT = DEFAULT_PORT;
+  if (autoOpen) {
+    const requested = Number.parseInt(env.PORT ?? '', 10);
+    const start = Number.isInteger(requested) && requested > 0 ? requested : DEFAULT_PORT;
+    try {
+      const chosen = await findFreePort(start, PORT_SCAN_RANGE);
+      if (chosen !== start) {
+        console.error(`Port ${start} in use, using ${chosen} instead.`);
+      }
+      env.PORT = String(chosen);
+    } catch (err) {
+      console.error(err.message);
+      process.exit(1);
+    }
+  }
 
   const stdio = autoOpen ? ['inherit', 'pipe', 'inherit'] : 'inherit';
 
@@ -84,12 +99,18 @@ function runBundled(relPath, { autoOpen = false } = {}) {
   child.on('exit', (code) => process.exit(code ?? 0));
 }
 
+let task;
 if (sub === 'init') {
-  runBundled('build/cli/template-install.mjs');
+  task = runBundled('build/cli/template-install.mjs');
 } else if (sub === 'export') {
-  runBundled('build/cli/template-export.mjs');
+  task = runBundled('build/cli/template-export.mjs');
 } else if (sub === 'reset') {
-  runBundled('build/cli/reset.mjs');
+  task = runBundled('build/cli/reset.mjs');
 } else {
-  runBundled('build/index.js', { autoOpen: true });
+  task = runBundled('build/index.js', { autoOpen: true });
 }
+
+task.catch((err) => {
+  console.error(err);
+  process.exit(1);
+});
