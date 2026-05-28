@@ -39,6 +39,7 @@ function get(): IndexHandle | null {
 export interface IndexUpsertArgs {
   kind: ChunkKind;
   ref_id: string;
+  chunk_idx?: number;
   text: string;
   source_path: string;
   source_mtime: string;
