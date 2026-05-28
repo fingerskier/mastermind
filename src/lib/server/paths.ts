@@ -91,3 +91,16 @@ export function scheduleIdFor(title: string, now: Date = new Date()): string {
   const titleSlug = slugify(title);
   return `${ts}-${titleSlug}`;
 }
+
+export function meetingsDir(): string {
+  return join(councilRoot(), 'meetings');
+}
+
+export function meetingDir(meetingId: string): string {
+  return join(meetingsDir(), meetingId);
+}
+
+export function meetingIdFor(title: string, now: Date = new Date()): string {
+  const ts = now.toISOString().replace(/[:.]/g, '-');
+  return `${ts}-${slugify(title)}`;
+}

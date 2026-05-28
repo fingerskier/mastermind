@@ -121,3 +121,59 @@ export interface ScheduleEvent {
   to?: string | null;
   count?: number;
 }
+
+export type MeetingStatus =
+  | 'running'
+  | 'awaiting_director'
+  | 'paused'
+  | 'synthesizing'
+  | 'ended'
+  | 'cancelled'
+  | 'failed';
+
+export interface Meeting {
+  id: string;
+  title: string;
+  chair_slug: string;
+  attendees: string[];
+  status: MeetingStatus;
+  window_k: number;
+  started_at: string;
+  ended_at: string | null;
+  current_round: number;
+  remaining_this_round: string[];
+  director_spoken_this_round: boolean;
+  last_summarized_turn: number;
+  total_turns: number;
+  pause_reason?: string;
+  memory_slugs?: string[];
+  shared_memory_slugs?: string[];
+  proposed_jobs?: string[];
+}
+
+export type MeetingEventType =
+  | 'created'
+  | 'awaiting_director'
+  | 'director_turn'
+  | 'director_skipped'
+  | 'round_started'
+  | 'turn_started'
+  | 'turn_finished'
+  | 'turn_failed'
+  | 'summarized'
+  | 'paused'
+  | 'resumed'
+  | 'synthesizing'
+  | 'synthesized'
+  | 'proposals_parsed'
+  | 'ended'
+  | 'cancelled'
+  | 'crashed';
+
+export interface MeetingEvent {
+  at: string;
+  type: MeetingEventType;
+  speaker?: string;
+  turn_index?: number;
+  message?: string;
+}
