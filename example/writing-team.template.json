@@ -1,10 +1,10 @@
 {
   "format_version": 1,
-  "name": "Tech Writing",
+  "name": "Writing Team",
   "version": "0.1.0",
   "license": "Apache-2.0",
   "council": {
-    "name": "Tech Writing"
+    "name": "Writing Team"
   },
   "councillors": [
     {

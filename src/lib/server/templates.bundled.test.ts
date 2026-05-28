@@ -6,7 +6,7 @@ describe('listBundledTemplates', () => {
     const list = await listBundledTemplates();
     const slugs = list.map((t) => t.slug).sort();
     expect(slugs).toEqual(
-      ['c-suite', 'engineering', 'hedge-fund', 'landsraad', 'tech-writing'].sort()
+      ['c-suite', 'engineering', 'hedge-fund', 'landsraad', 'writing-team'].sort()
     );
     const hedge = list.find((t) => t.slug === 'hedge-fund');
     expect(hedge).toBeDefined();

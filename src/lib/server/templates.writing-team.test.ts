@@ -3,16 +3,16 @@ import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { parseTemplate } from './templates';
 
-describe('example/tech-writing.template.json', () => {
-  const path = join(process.cwd(), 'example', 'tech-writing.template.json');
+describe('example/writing-team.template.json', () => {
+  const path = join(process.cwd(), 'example', 'writing-team.template.json');
 
   it('parses with parseTemplate', () => {
     const raw = readFileSync(path, 'utf8');
     const t = parseTemplate(raw);
     expect(t.format_version).toBe(1);
-    expect(t.name).toBe('Tech Writing');
+    expect(t.name).toBe('Writing Team');
     expect(t.version).toBe('0.1.0');
-    expect(t.council.name).toBe('Tech Writing');
+    expect(t.council.name).toBe('Writing Team');
   });
 
   it('has the expected councillor roster (slug + role + adapter)', () => {
