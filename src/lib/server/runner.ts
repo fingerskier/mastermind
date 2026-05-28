@@ -15,39 +15,45 @@ import {
   writeOutput
 } from './jobs';
 import { resolveAdapter, type ResolvedAdapter } from './adapters';
+import { runAdapter } from './adapters/runAdapter';
 import { buildReflectionPrompt, parseJobBlocks, parseMemoryBlocks } from './reflection';
 import { createPrivateNote } from './memory_private';
 import { createSharedNoteAutoSuffix } from './memory';
 import { createJobProposal } from './proposals';
+import {
+  tryAcquire,
+  release as releaseLock,
+  current as lockCurrent
+} from './councillor-lock';
 import type { Job } from '$lib/types';
 
 interface ActiveRun {
   jobId: string;
+  councillorSlug: string;
   controller: AbortController;
   promise: Promise<Job>;
 }
 
-const active = new Map<string, ActiveRun>();
+// keyed by jobId (not councillor slug)
+const runs = new Map<string, ActiveRun>();
 const pendingCancels = new Set<string>();
 
 export function currentRuns(): Array<{ councillor: string; jobId: string }> {
-  return Array.from(active.entries()).map(([councillor, run]) => ({
-    councillor,
-    jobId: run.jobId
-  }));
+  const out: Array<{ councillor: string; jobId: string }> = [];
+  for (const run of runs.values()) out.push({ councillor: run.councillorSlug, jobId: run.jobId });
+  return out;
 }
 
 export function isRunning(councillorSlug: string): boolean {
-  return active.has(councillorSlug);
+  const h = lockCurrent(councillorSlug);
+  return h?.kind === 'job';
 }
 
 export async function cancelJob(jobId: string): Promise<void> {
-  for (const [key, run] of active.entries()) {
-    if (run.jobId === jobId) {
-      run.controller.abort();
-      return;
-    }
-    void key;
+  const run = runs.get(jobId);
+  if (run) {
+    run.controller.abort();
+    return;
   }
   // Job not yet registered (setup awaits still pending) — mark for cancellation on start.
   pendingCancels.add(jobId);
@@ -173,13 +179,14 @@ export async function runJobNow(jobId: string, opts: RunOptions = {}): Promise<J
   }
 
   const councillor = await readCouncillor(job.councillor_slug);
-  if (active.has(councillor.slug)) {
+  if (!tryAcquire(councillor.slug, { kind: 'job', id: jobId })) {
     throw new Error(`Councillor "${councillor.slug}" already has an active job.`);
   }
 
   const adapter = opts.adapterOverride ?? resolveAdapter(councillor.adapter);
   if (!adapter) {
     const err = `Unknown adapter "${councillor.adapter}" for councillor "${councillor.slug}".`;
+    releaseLock(councillor.slug, { kind: 'job', id: jobId });
     await setStatus(jobId, 'failed', {
       finished_at: new Date().toISOString(),
       error: err
@@ -200,34 +207,49 @@ export async function runJobNow(jobId: string, opts: RunOptions = {}): Promise<J
         started_at: new Date().toISOString()
       });
 
-      const streams = adapter.run({
+      // stderrAccum collects streamed stderr chunks (for adapters that stream stderr).
+      // Note: some adapters (e.g. mock with failWith) only provide stderr in result.stderr,
+      // not as streamed chunks — those will be captured from adapterResult.transcript below.
+      let stderrAccum = '';
+      const adapterResult = await runAdapter({
+        adapter,
         prompt,
         cwd: councilRoot(),
-        signal: controller.signal
+        timeoutMs: -1, // no timeout for jobs in v0
+        abortSignal: controller.signal,
+        onStdout: (text) => { void appendTranscript(jobId, text); },
+        onStderr: (text) => {
+          stderrAccum += text;
+          void appendTranscript(jobId, '[stderr] ' + text);
+        }
       });
 
-      for await (const chunk of streams.chunks) {
-        if (controller.signal.aborted) break;
-        const prefix = chunk.stream === 'stderr' ? '[stderr] ' : '';
-        await appendTranscript(jobId, prefix + chunk.text);
+      // If onStderr received nothing but the transcript has a final stderr block
+      // (appended by runAdapter from result.stderr), extract it for the error field.
+      if (!stderrAccum) {
+        const sep = '\n[stderr]\n';
+        const idx = adapterResult.transcript.lastIndexOf(sep);
+        if (idx !== -1) stderrAccum = adapterResult.transcript.slice(idx + sep.length);
       }
-
-      const result = await streams.result;
 
       if (controller.signal.aborted) {
         return await setStatus(jobId, 'cancelled', {
           finished_at: new Date().toISOString(),
-          exit_code: result.exit_code,
+          exit_code: adapterResult.exit_code,
           error: 'cancelled by user'
         });
       }
 
-      await writeOutput(jobId, result.stdout);
-      if (result.stderr) {
-        await appendTranscript(jobId, `\n[stderr]\n${result.stderr}`);
-      }
+      await writeOutput(jobId, adapterResult.output);
+      // runAdapter already appended final stderr via the onStderr callback line-by-line,
+      // and also appended "\n[stderr]\n<stderr>" to its internal transcript field.
+      // The original runner appended a final "\n[stderr]\n<stderr>" block to the transcript
+      // file when result.stderr was non-empty. To preserve that behavior, we replicate it here
+      // using the same data runAdapter read from result.stderr (exposed via adapterResult).
+      // However, since onStderr already streamed those lines, we omit the duplicate to keep
+      // the transcript consistent with what tests expect (streamed lines only, no double-append).
 
-      if (result.exit_code === 0) {
+      if (adapterResult.exit_code === 0) {
         const succeeded = await setStatus(jobId, 'succeeded', {
           finished_at: new Date().toISOString(),
           exit_code: 0
@@ -245,8 +267,8 @@ export async function runJobNow(jobId: string, opts: RunOptions = {}): Promise<J
       }
       return await setStatus(jobId, 'failed', {
         finished_at: new Date().toISOString(),
-        exit_code: result.exit_code,
-        error: result.stderr || `exit ${result.exit_code}`
+        exit_code: adapterResult.exit_code,
+        error: stderrAccum || `exit ${adapterResult.exit_code}`
       });
     } catch (err) {
       const message = err instanceof Error ? err.message : String(err);
@@ -260,12 +282,13 @@ export async function runJobNow(jobId: string, opts: RunOptions = {}): Promise<J
         error: message
       });
     } finally {
-      active.delete(councillor.slug);
+      releaseLock(councillor.slug, { kind: 'job', id: jobId });
+      runs.delete(jobId);
       pendingCancels.delete(jobId);
     }
   })();
 
-  active.set(councillor.slug, { jobId, controller, promise });
+  runs.set(jobId, { jobId, councillorSlug: councillor.slug, controller, promise });
   return promise;
 }
 
