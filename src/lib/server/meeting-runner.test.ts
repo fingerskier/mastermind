@@ -2,11 +2,11 @@ import { describe, it, expect, beforeEach } from 'vitest';
 import { mkdtempSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { startMeeting, directorSpeak, directorSkip } from './meeting-runner';
+import { startMeeting, directorSpeak, directorSkip, endMeeting } from './meeting-runner';
 import { _resetForTests as resetLock, listHeldBy } from './councillor-lock';
 import { createCouncil } from './councils';
 import { createCouncillor } from './councillors';
-import { readMeeting, readTranscript, readMeetingEvents, readSummary } from './meetings';
+import { readMeeting, readTranscript, readMeetingEvents, readSummary, readSynthesis } from './meetings';
 
 async function setup() {
   process.env.LANDSRAAD_COUNCIL_ROOT = mkdtempSync(join(tmpdir(), 'landsraad-mr-'));
@@ -136,5 +136,34 @@ describe('director actions', () => {
     expect(summary.length).toBeGreaterThan(0);
     const evts = await readMeetingEvents(m.id);
     expect(evts.some((e) => e.type === 'summarized')).toBe(true);
+  });
+});
+
+describe('endMeeting', () => {
+  beforeEach(setup);
+
+  it('endMeeting writes synthesis.md, releases locks, parses MEMORY/JOB blocks', async () => {
+    const m = await startMeeting({ title: 'S', topic: 't', chair_slug: 'leto', attendees: ['leto', 'mocky'], window_k: 2 });
+    await directorSpeak(m.id, 'discuss X');
+    for (let i = 0; i < 100; i++) {
+      const cur = await readMeeting(m.id);
+      if (cur.status === 'awaiting_director') break;
+      await new Promise((r) => setTimeout(r, 20));
+    }
+    await endMeeting(m.id);
+    const final = await readMeeting(m.id);
+    expect(final.status).toBe('ended');
+    expect(final.ended_at).toBeTruthy();
+    const synth = await readSynthesis(m.id);
+    expect(synth.length).toBeGreaterThan(0);
+    const { listHeldBy } = await import('./councillor-lock');
+    expect(listHeldBy({ kind: 'meeting', id: m.id })).toEqual([]);
+  });
+
+  it('endMeeting works from the awaiting_director resting state', async () => {
+    const m = await startMeeting({ title: 'S', topic: 't', chair_slug: 'leto', attendees: ['leto'], window_k: 2 });
+    await endMeeting(m.id);
+    const final = await readMeeting(m.id);
+    expect(final.status).toBe('ended');
   });
 });

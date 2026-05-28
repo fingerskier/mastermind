@@ -20,6 +20,8 @@ import { runAdapter } from './adapters/runAdapter';
 import { councilRoot } from './paths';
 import { assembleContextFor } from './context';
 import { MEETING_TURN_TIMEOUT_MS, MEETING_SUMMARY_TIMEOUT_MS } from './config';
+import { applyReflectionBlocks } from './reflection';
+import { writeSynthesis } from './meetings';
 
 const inFlight = new Map<string, AbortController>(); // key: meetingId
 
@@ -267,4 +269,114 @@ export async function advance(id: string): Promise<void> {
   }
 
   await advance(id);
+}
+
+export async function endMeeting(id: string, now: Date = new Date()): Promise<void> {
+  const cur = await readMeeting(id);
+  if (cur.status === 'ended' || cur.status === 'cancelled' || cur.status === 'failed') return;
+  if (cur.status === 'synthesizing') return;
+
+  // If a turn is in flight, abort and wait briefly for it to settle.
+  const inflight = inFlight.get(id);
+  if (inflight) inflight.abort();
+  for (let i = 0; i < 50 && inFlight.has(id); i++) await new Promise((r) => setTimeout(r, 20));
+
+  const synthesizing = await readMeeting(id);
+  synthesizing.status = 'synthesizing';
+  await writeMeeting(synthesizing);
+  await appendMeetingEvent(id, { at: now.toISOString(), type: 'synthesizing' });
+
+  const chair = await readCouncillor(synthesizing.chair_slug);
+  const adapter = resolveAdapter(chair.adapter);
+  const topic = await readTopic(id);
+  const summary = await readSummary(id);
+  const transcript = await readTx(id);
+  const recent = lastKTurns(transcript, synthesizing.window_k)
+    .map((t) => `## Turn ${t.turnIndex} — ${t.speaker} — ${t.at}\n\n${t.body}`)
+    .join('\n\n');
+
+  const prompt = [
+    '# Meeting synthesis',
+    '',
+    `You are ${synthesizing.chair_slug} (chair). The director has ended the meeting. Write a concise synthesis — decisions, open threads, action items.`,
+    '',
+    'You may emit zero or more memory blocks:',
+    '',
+    '<<MEMORY title="short slug-friendly title">>',
+    'body — why worth remembering',
+    '<</MEMORY>>',
+    '',
+    'Use scope="shared" on the opening tag for council-wide memory:',
+    '',
+    '<<MEMORY title="..." scope="shared">>...<</MEMORY>>',
+    '',
+    'You may also propose zero or more follow-up jobs:',
+    '',
+    '<<JOB title="..." councillor="optional-slug" priority="normal">>',
+    'brief',
+    '<</JOB>>',
+    '',
+    '## Topic',
+    '',
+    topic.trim() || '(empty)',
+    '',
+    '## Rolling summary',
+    '',
+    summary.trim() || '(none)',
+    '',
+    '## Recent turns',
+    '',
+    recent || '(no turns)',
+    ''
+  ].join('\n');
+
+  let synthesisText = '';
+  let failed = false;
+  if (!adapter) {
+    failed = true;
+  } else {
+    const result = await runAdapter({
+      adapter,
+      prompt,
+      cwd: councilRoot(),
+      timeoutMs: MEETING_SUMMARY_TIMEOUT_MS
+    });
+    if (result.exit_code !== 0) failed = true;
+    else synthesisText = result.output;
+  }
+
+  if (failed) {
+    const c = await readMeeting(id);
+    c.status = 'failed';
+    c.ended_at = now.toISOString();
+    await writeMeeting(c);
+    await appendMeetingEvent(id, { at: now.toISOString(), type: 'crashed', message: 'synthesis adapter failed' });
+    await releaseMeetingLocks(c);
+    return;
+  }
+
+  await writeSynthesis(id, synthesisText);
+  await appendMeetingEvent(id, { at: now.toISOString(), type: 'synthesized' });
+
+  const apply = await applyReflectionBlocks({
+    text: synthesisText,
+    sourceCouncillorSlug: synthesizing.chair_slug,
+    sourceKind: 'meeting',
+    sourceId: id
+  });
+  await appendMeetingEvent(id, {
+    at: now.toISOString(),
+    type: 'proposals_parsed',
+    message: `mem=${apply.memorySlugs.length} shared=${apply.sharedMemorySlugs.length} proposals=${apply.proposalIds.length}`
+  });
+
+  const ended = await readMeeting(id);
+  ended.status = 'ended';
+  ended.ended_at = now.toISOString();
+  ended.memory_slugs = apply.memorySlugs;
+  ended.shared_memory_slugs = apply.sharedMemorySlugs;
+  ended.proposed_jobs = apply.proposalIds;
+  await writeMeeting(ended);
+  await appendMeetingEvent(id, { at: now.toISOString(), type: 'ended' });
+  await releaseMeetingLocks(ended);
 }
