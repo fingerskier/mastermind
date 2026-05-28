@@ -96,6 +96,17 @@
   </section>
 {/if}
 
+{#if job.shared_memory_slugs && job.shared_memory_slugs.length > 0}
+  <section>
+    <h2>Shared memory updated</h2>
+    <ul class="mem-list">
+      {#each job.shared_memory_slugs as slug}
+        <li><a href="/memory/{slug}">{slug}</a></li>
+      {/each}
+    </ul>
+  </section>
+{/if}
+
 {#if data.proposals && data.proposals.length > 0}
   <section>
     <h2>Suggested jobs</h2>
