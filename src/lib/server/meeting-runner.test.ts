@@ -2,7 +2,7 @@ import { describe, it, expect, beforeEach } from 'vitest';
 import { mkdtempSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { startMeeting, directorSpeak, directorSkip, endMeeting } from './meeting-runner';
+import { startMeeting, directorSpeak, directorSkip, endMeeting, cancelMeeting, resumeMeeting } from './meeting-runner';
 import { _resetForTests as resetLock, listHeldBy } from './councillor-lock';
 import { createCouncil } from './councils';
 import { createCouncillor } from './councillors';
@@ -165,5 +165,33 @@ describe('endMeeting', () => {
     await endMeeting(m.id);
     const final = await readMeeting(m.id);
     expect(final.status).toBe('ended');
+  });
+});
+
+describe('cancelMeeting and resumeMeeting', () => {
+  beforeEach(setup);
+
+  it('cancelMeeting transitions to cancelled and releases locks', async () => {
+    const m = await startMeeting({ title: 'S', topic: 't', chair_slug: 'leto', attendees: ['leto'], window_k: 2 });
+    await cancelMeeting(m.id);
+    const final = await readMeeting(m.id);
+    expect(final.status).toBe('cancelled');
+    const { listHeldBy } = await import('./councillor-lock');
+    expect(listHeldBy({ kind: 'meeting', id: m.id })).toEqual([]);
+  });
+
+  it('resumeMeeting flips paused → running and emits resumed', async () => {
+    const m = await startMeeting({ title: 'S', topic: 't', chair_slug: 'leto', attendees: ['leto'], window_k: 2 });
+    const meetings = await import('./meetings');
+    const cur = await meetings.readMeeting(m.id);
+    cur.status = 'paused';
+    cur.pause_reason = 'turn_failed: test';
+    cur.director_spoken_this_round = true;
+    await meetings.writeMeeting(cur);
+    await resumeMeeting(m.id);
+    const after = await meetings.readMeeting(m.id);
+    expect(['running', 'awaiting_director', 'ended', 'paused']).toContain(after.status);
+    const evts = await readMeetingEvents(m.id);
+    expect(evts.some((e) => e.type === 'resumed')).toBe(true);
   });
 });

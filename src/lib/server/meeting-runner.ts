@@ -271,6 +271,31 @@ export async function advance(id: string): Promise<void> {
   await advance(id);
 }
 
+export async function cancelMeeting(id: string, now: Date = new Date()): Promise<void> {
+  const cur = await readMeeting(id);
+  if (cur.status === 'ended' || cur.status === 'cancelled' || cur.status === 'failed') return;
+  const inflight = inFlight.get(id);
+  if (inflight) inflight.abort();
+  for (let i = 0; i < 50 && inFlight.has(id); i++) await new Promise((r) => setTimeout(r, 20));
+  const fresh = await readMeeting(id);
+  fresh.status = 'cancelled';
+  fresh.ended_at = now.toISOString();
+  fresh.pause_reason = undefined;
+  await writeMeeting(fresh);
+  await appendMeetingEvent(id, { at: now.toISOString(), type: 'cancelled' });
+  await releaseMeetingLocks(fresh);
+}
+
+export async function resumeMeeting(id: string, now: Date = new Date()): Promise<void> {
+  const cur = await readMeeting(id);
+  if (cur.status !== 'paused') return;
+  cur.status = 'running';
+  cur.pause_reason = undefined;
+  await writeMeeting(cur);
+  await appendMeetingEvent(id, { at: now.toISOString(), type: 'resumed' });
+  await advance(id);
+}
+
 export async function endMeeting(id: string, now: Date = new Date()): Promise<void> {
   const cur = await readMeeting(id);
   if (cur.status === 'ended' || cur.status === 'cancelled' || cur.status === 'failed') return;
