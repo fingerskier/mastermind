@@ -1,12 +1,18 @@
 <script lang="ts">
   import { invalidateAll } from '$app/navigation';
   import { onDestroy } from 'svelte';
+  import { marked } from 'marked';
   import type { PageData } from './$types';
 
   let { data }: { data: PageData } = $props();
   const c = $derived(data.council);
   const job = $derived(data.job);
   const fromSchedule = $derived(data.job.spawned_by_schedule_id ?? null);
+
+  const renderMd = (s: string) =>
+    marked.parse(s, { async: false, gfm: true, breaks: false }) as string;
+  const outputHtml = $derived(data.output ? renderMd(data.output) : '');
+  const transcriptHtml = $derived(data.transcript ? renderMd(data.transcript) : '');
 
   let timer: ReturnType<typeof setInterval> | null = null;
 
@@ -56,21 +62,21 @@
   <pre class="block">{job.brief}</pre>
 </section>
 
+{#if job.status === 'succeeded' && data.output}
+  <section>
+    <h2>Output</h2>
+    <div class="md-block">{@html outputHtml}</div>
+  </section>
+{/if}
+
 <section>
   <h2>Transcript</h2>
   {#if data.transcript}
-    <pre class="block">{data.transcript}</pre>
+    <div class="md-block">{@html transcriptHtml}</div>
   {:else}
     <p class="empty">No output yet.</p>
   {/if}
 </section>
-
-{#if job.status === 'succeeded' && data.output}
-  <section>
-    <h2>Output</h2>
-    <pre class="block">{data.output}</pre>
-  </section>
-{/if}
 
 {#if job.error}
   <section>
@@ -142,6 +148,51 @@
     max-height: 400px; overflow-y: auto;
   }
   .block.error { border-color: var(--danger); color: var(--danger); }
+  .md-block {
+    background: #1a1d24;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 0.75rem 1.25rem;
+    font-size: 0.95em;
+    line-height: 1.55;
+    max-height: 400px;
+    overflow-y: auto;
+  }
+  .md-block :global(h1),
+  .md-block :global(h2),
+  .md-block :global(h3),
+  .md-block :global(h4) { margin: 1em 0 0.4em; line-height: 1.25; }
+  .md-block :global(h1) { font-size: 1.4em; }
+  .md-block :global(h2) { font-size: 1.2em; margin: 1em 0 0.4em; }
+  .md-block :global(h3) { font-size: 1.05em; }
+  .md-block :global(p) { margin: 0.5em 0; }
+  .md-block :global(ul),
+  .md-block :global(ol) { padding-left: 1.4em; margin: 0.5em 0; }
+  .md-block :global(li) { margin: 0.15em 0; }
+  .md-block :global(code) {
+    background: #0f1115;
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    padding: 0.05em 0.35em;
+    font-family: ui-monospace, "Cascadia Mono", Consolas, monospace;
+    font-size: 0.9em;
+  }
+  .md-block :global(pre) {
+    background: #0f1115;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 0.8rem 1rem;
+    overflow-x: auto;
+  }
+  .md-block :global(pre code) { background: transparent; border: 0; padding: 0; }
+  .md-block :global(blockquote) {
+    border-left: 3px solid var(--border);
+    color: var(--muted);
+    margin: 0.5em 0;
+    padding: 0.1em 0.9em;
+  }
+  .md-block :global(a) { color: var(--accent); }
+  .md-block :global(hr) { border: 0; border-top: 1px solid var(--border); margin: 1em 0; }
   .empty { color: var(--muted); }
   .status { font-size: 0.75em; padding: 0.15rem 0.5rem; border-radius: 999px; border: 1px solid var(--border); color: var(--muted); font-weight: 500; }
   .status-running { color: var(--accent); border-color: var(--accent); }
