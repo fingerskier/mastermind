@@ -5,6 +5,7 @@ import type { Meeting, MeetingEvent, MeetingStatus } from '$lib/types';
 import { meetingDir, meetingIdFor, meetingsDir } from './paths';
 import { hasCouncil } from './councils';
 import { readCouncillor } from './councillors';
+import { indexUpsert } from './indexer';
 
 const MEETING_FILE = 'meeting.json';
 const TOPIC_FILE = 'topic.md';
@@ -74,6 +75,15 @@ export async function createMeeting(
   await writeFile(join(dir, SUMMARY_FILE), '', 'utf8');
   await appendMeetingEvent(id, { at: now.toISOString(), type: 'created' });
   await appendMeetingEvent(id, { at: now.toISOString(), type: 'awaiting_director' });
+  await indexUpsert({
+    kind: 'meeting_topic',
+    ref_id: meeting.id,
+    text: input.topic,
+    source_path: join(dir, TOPIC_FILE),
+    source_mtime: meeting.started_at,
+    title: meeting.title,
+    councillor_slug: null
+  });
   return meeting;
 }
 
@@ -127,6 +137,17 @@ export async function appendTranscriptBlock(id: string, block: TranscriptBlock):
   const file = join(meetingDir(id), TRANSCRIPT_FILE);
   const text = `\n## Turn ${block.turnIndex} — ${block.speaker} — ${block.at}\n\n${block.body.trim()}\n`;
   await appendFile(file, text, 'utf8');
+  const meta = await readMeeting(id).catch(() => null);
+  await indexUpsert({
+    kind: 'meeting_turn',
+    ref_id: id,
+    chunk_idx: block.turnIndex,
+    text: block.body,
+    source_path: file,
+    source_mtime: block.at,
+    title: `${meta?.title ?? id} · turn ${block.turnIndex} · ${block.speaker}`,
+    councillor_slug: block.speaker === 'director' ? null : block.speaker
+  });
 }
 
 export async function readTranscript(id: string): Promise<string> {
@@ -139,6 +160,16 @@ export async function readTopic(id: string): Promise<string> {
 
 export async function writeSummary(id: string, body: string): Promise<void> {
   await writeFile(join(meetingDir(id), SUMMARY_FILE), body, 'utf8');
+  const meta = await readMeeting(id).catch(() => null);
+  await indexUpsert({
+    kind: 'meeting_summary',
+    ref_id: id,
+    text: body,
+    source_path: join(meetingDir(id), SUMMARY_FILE),
+    source_mtime: new Date().toISOString(),
+    title: `${meta?.title ?? id} · summary`,
+    councillor_slug: meta?.chair_slug ?? null
+  });
 }
 
 export async function readSummary(id: string): Promise<string> {
@@ -147,6 +178,16 @@ export async function readSummary(id: string): Promise<string> {
 
 export async function writeSynthesis(id: string, body: string): Promise<void> {
   await writeFile(join(meetingDir(id), SYNTHESIS_FILE), body, 'utf8');
+  const meta = await readMeeting(id).catch(() => null);
+  await indexUpsert({
+    kind: 'meeting_synthesis',
+    ref_id: id,
+    text: body,
+    source_path: join(meetingDir(id), SYNTHESIS_FILE),
+    source_mtime: new Date().toISOString(),
+    title: `${meta?.title ?? id} · synthesis`,
+    councillor_slug: meta?.chair_slug ?? null
+  });
 }
 
 export async function readSynthesis(id: string): Promise<string> {
