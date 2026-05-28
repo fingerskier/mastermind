@@ -6,7 +6,7 @@ import { startMeeting, directorSpeak, directorSkip } from './meeting-runner';
 import { _resetForTests as resetLock, listHeldBy } from './councillor-lock';
 import { createCouncil } from './councils';
 import { createCouncillor } from './councillors';
-import { readMeeting, readTranscript, readMeetingEvents } from './meetings';
+import { readMeeting, readTranscript, readMeetingEvents, readSummary } from './meetings';
 
 async function setup() {
   process.env.LANDSRAAD_COUNCIL_ROOT = mkdtempSync(join(tmpdir(), 'landsraad-mr-'));
@@ -115,5 +115,26 @@ describe('director actions', () => {
     expect(final.total_turns).toBe(3); // director + 2 councillors
     const t = await readTranscript(m.id);
     expect(t.split('## Turn').length - 1).toBe(3);
+  });
+
+  it('with window_k=2, chair-summary fires once we exceed the window', async () => {
+    const m = await startMeeting({ title: 'S', topic: 't', chair_slug: 'leto', attendees: ['leto', 'mocky'], window_k: 2 });
+    await directorSpeak(m.id, 'round 1 input');
+    for (let i = 0; i < 100; i++) {
+      const cur = await readMeeting(m.id);
+      if (cur.status === 'awaiting_director' && cur.current_round === 2) break;
+      await new Promise((r) => setTimeout(r, 20));
+    }
+    await directorSpeak(m.id, 'round 2 input');
+    for (let i = 0; i < 100; i++) {
+      const cur = await readMeeting(m.id);
+      if (cur.status === 'awaiting_director' && cur.current_round === 3) break;
+      await new Promise((r) => setTimeout(r, 20));
+    }
+    // Total turns by now: 3 + 3 = 6. window_k=2 → at least 4 turns should be summarized.
+    const summary = await readSummary(m.id);
+    expect(summary.length).toBeGreaterThan(0);
+    const evts = await readMeetingEvents(m.id);
+    expect(evts.some((e) => e.type === 'summarized')).toBe(true);
   });
 });

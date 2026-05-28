@@ -7,7 +7,9 @@ import {
   writeMeeting,
   readTopic,
   readSummary,
+  writeSummary,
   readTranscript as readTx,
+  parseTranscript,
   lastKTurns,
   type NewMeetingInput
 } from './meetings';
@@ -17,9 +19,68 @@ import { resolveAdapter } from './adapters';
 import { runAdapter } from './adapters/runAdapter';
 import { councilRoot } from './paths';
 import { assembleContextFor } from './context';
-import { MEETING_TURN_TIMEOUT_MS } from './config';
+import { MEETING_TURN_TIMEOUT_MS, MEETING_SUMMARY_TIMEOUT_MS } from './config';
 
 const inFlight = new Map<string, AbortController>(); // key: meetingId
+
+async function refreshSummaryIfNeeded(meetingId: string): Promise<void> {
+  const m = await readMeeting(meetingId);
+  const transcript = await readTx(meetingId);
+  const turns = parseTranscript(transcript);
+  const displacedEnd = turns.length - m.window_k;
+  if (displacedEnd <= m.last_summarized_turn) return;
+  const displaced = turns.filter(
+    (t) => t.turnIndex > m.last_summarized_turn && t.turnIndex <= displacedEnd
+  );
+  if (displaced.length === 0) return;
+
+  const chair = await readCouncillor(m.chair_slug);
+  const adapter = resolveAdapter(chair.adapter);
+  if (!adapter) return;
+
+  const prior = await readSummary(meetingId);
+  const block = displaced
+    .map((t) => `## Turn ${t.turnIndex} — ${t.speaker} — ${t.at}\n\n${t.body}`)
+    .join('\n\n');
+  const prompt = [
+    '# Rolling meeting summary',
+    '',
+    `You are the chair (${m.chair_slug}) summarizing displaced turns for future context.`,
+    'Rewrite the summary so it covers everything below in 4-8 sentences. Preserve names, decisions, open threads.',
+    '',
+    '## Prior summary',
+    '',
+    prior.trim() || '(none)',
+    '',
+    '## New displaced turns',
+    '',
+    block,
+    ''
+  ].join('\n');
+
+  const result = await runAdapter({
+    adapter,
+    prompt,
+    cwd: councilRoot(),
+    timeoutMs: MEETING_SUMMARY_TIMEOUT_MS
+  });
+  if (result.exit_code !== 0) {
+    await appendMeetingEvent(meetingId, {
+      at: new Date().toISOString(),
+      type: 'turn_failed',
+      message: `summary_failed: exit ${result.exit_code}`
+    });
+    return;
+  }
+  await writeSummary(meetingId, result.output.trim());
+  const cur = await readMeeting(meetingId);
+  cur.last_summarized_turn = displacedEnd;
+  await writeMeeting(cur);
+  await appendMeetingEvent(meetingId, {
+    at: new Date().toISOString(),
+    type: 'summarized'
+  });
+}
 
 async function buildTurnPrompt(meetingId: string, speakerSlug: string): Promise<string> {
   const m = await readMeeting(meetingId);
@@ -148,6 +209,8 @@ export async function advance(id: string): Promise<void> {
   const speakerSlug = m.remaining_this_round.shift()!;
   await writeMeeting(m);
   await appendMeetingEvent(id, { at: new Date().toISOString(), type: 'turn_started', speaker: speakerSlug });
+
+  await refreshSummaryIfNeeded(id);
 
   const councillor = await readCouncillor(speakerSlug);
   const adapter = resolveAdapter(councillor.adapter);
