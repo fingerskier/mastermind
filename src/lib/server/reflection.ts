@@ -61,6 +61,63 @@ export function parseJobBlocks(text: string): ParsedJobBlock[] {
   return out;
 }
 
+import { createPrivateNote } from './memory_private';
+import { createSharedNoteAutoSuffix } from './memory';
+import { createJobProposal } from './proposals';
+
+export interface ApplyReflectionInput {
+  text: string;
+  sourceCouncillorSlug: string;
+  sourceKind: 'job' | 'meeting';
+  sourceId: string;
+}
+
+export interface ApplyReflectionResult {
+  memorySlugs: string[];
+  sharedMemorySlugs: string[];
+  proposalIds: string[];
+  errors: string[];
+}
+
+export async function applyReflectionBlocks(input: ApplyReflectionInput): Promise<ApplyReflectionResult> {
+  const memorySlugs: string[] = [];
+  const sharedMemorySlugs: string[] = [];
+  const proposalIds: string[] = [];
+  const errors: string[] = [];
+
+  for (const b of parseMemoryBlocks(input.text)) {
+    try {
+      if (b.scope === 'shared') {
+        const note = await createSharedNoteAutoSuffix({ title: b.title, body: b.body });
+        sharedMemorySlugs.push(note.slug);
+      } else {
+        const note = await createPrivateNote(input.sourceCouncillorSlug, { title: b.title, body: b.body });
+        memorySlugs.push(note.slug);
+      }
+    } catch (err) {
+      errors.push(`note "${b.title}" failed: ${err instanceof Error ? err.message : String(err)}`);
+    }
+  }
+
+  for (const jb of parseJobBlocks(input.text)) {
+    try {
+      const p = await createJobProposal({
+        proposed_by: input.sourceCouncillorSlug,
+        source_job_id: input.sourceKind === 'job' ? input.sourceId : `meeting:${input.sourceId}`,
+        title: jb.title,
+        brief: jb.brief,
+        target_councillor: jb.councillor,
+        priority: jb.priority
+      });
+      proposalIds.push(p.id);
+    } catch (err) {
+      errors.push(`job proposal "${jb.title}" failed: ${err instanceof Error ? err.message : String(err)}`);
+    }
+  }
+
+  return { memorySlugs, sharedMemorySlugs, proposalIds, errors };
+}
+
 export interface ReflectionPromptInput {
   title: string;
   brief: string;

@@ -16,10 +16,7 @@ import {
 } from './jobs';
 import { resolveAdapter, type ResolvedAdapter } from './adapters';
 import { runAdapter } from './adapters/runAdapter';
-import { buildReflectionPrompt, parseJobBlocks, parseMemoryBlocks } from './reflection';
-import { createPrivateNote } from './memory_private';
-import { createSharedNoteAutoSuffix } from './memory';
-import { createJobProposal } from './proposals';
+import { applyReflectionBlocks, buildReflectionPrompt } from './reflection';
 import {
   tryAcquire,
   release as releaseLock,
@@ -102,64 +99,37 @@ async function reflectAfterSuccess(
     return;
   }
 
-  const blocks = parseMemoryBlocks(reflectionOut);
-  const privateSlugs: string[] = [];
-  const sharedSlugs: string[] = [];
-  for (const b of blocks) {
-    try {
-      if (b.scope === 'shared') {
-        const note = await createSharedNoteAutoSuffix({ title: b.title, body: b.body });
-        sharedSlugs.push(note.slug);
-      } else {
-        const note = await createPrivateNote(councillor.slug, { title: b.title, body: b.body });
-        privateSlugs.push(note.slug);
-      }
-    } catch (err) {
-      await appendEvent(job.id, {
-        at: new Date().toISOString(),
-        type: 'reflection_failed',
-        message: `note "${b.title}" failed: ${err instanceof Error ? err.message : String(err)}`
-      });
-    }
+  const apply = await applyReflectionBlocks({
+    text: reflectionOut,
+    sourceCouncillorSlug: councillor.slug,
+    sourceKind: 'job',
+    sourceId: job.id
+  });
+  for (const msg of apply.errors) {
+    await appendEvent(job.id, {
+      at: new Date().toISOString(),
+      type: 'reflection_failed',
+      message: msg
+    });
   }
-
-  const totalWritten = privateSlugs.length + sharedSlugs.length;
+  const persisted = await readJob(job.id);
+  await writeJob({
+    ...persisted,
+    memory_slugs: apply.memorySlugs,
+    shared_memory_slugs: apply.sharedMemorySlugs
+  });
+  const totalWritten = apply.memorySlugs.length + apply.sharedMemorySlugs.length;
   await appendEvent(job.id, {
     at: new Date().toISOString(),
     type: 'reflected',
     message: `wrote ${totalWritten} memor${totalWritten === 1 ? 'y' : 'ies'}`
   });
-
-  const persisted = await readJob(job.id);
-  await writeJob({
-    ...persisted,
-    memory_slugs: privateSlugs,
-    shared_memory_slugs: sharedSlugs
-  });
-
-  const jobBlocks = parseJobBlocks(reflectionOut);
-  for (const jb of jobBlocks) {
-    try {
-      const p = await createJobProposal({
-        proposed_by: councillor.slug,
-        source_job_id: job.id,
-        title: jb.title,
-        brief: jb.brief,
-        target_councillor: jb.councillor,
-        priority: jb.priority
-      });
-      await appendEvent(job.id, {
-        at: new Date().toISOString(),
-        type: 'proposed_job',
-        message: `proposal ${p.id} (target: ${jb.councillor ?? 'unassigned'})`
-      });
-    } catch (err) {
-      await appendEvent(job.id, {
-        at: new Date().toISOString(),
-        type: 'reflection_failed',
-        message: `job proposal "${jb.title}" failed: ${err instanceof Error ? err.message : String(err)}`
-      });
-    }
+  for (const pid of apply.proposalIds) {
+    await appendEvent(job.id, {
+      at: new Date().toISOString(),
+      type: 'proposed_job',
+      message: `proposal ${pid}`
+    });
   }
 }
 
