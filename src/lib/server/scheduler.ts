@@ -7,6 +7,8 @@ import {
   readSchedule,
   writeSchedule
 } from './schedules';
+import { listMeetings } from './meetings';
+import { recoverMeetings, advance as advanceMeeting } from './meeting-runner';
 import { nextFire, validateCron } from './cron';
 import type { Schedule } from '$lib/types';
 
@@ -177,15 +179,28 @@ export async function catchUp(now: Date = new Date()): Promise<void> {
   }
 }
 
+async function tickMeetings(): Promise<void> {
+  try {
+    const all = await listMeetings({ status: 'running' });
+    for (const m of all) {
+      void advanceMeeting(m.id);
+    }
+  } catch (err) {
+    console.error('[scheduler] meeting tick crashed:', err);
+  }
+}
+
 export async function startScheduler(now: Date = new Date()): Promise<void> {
   if (interval) return;
   try {
+    await recoverMeetings(now);
     await catchUp(now);
   } catch (err) {
-    console.error('[scheduler] catchUp failed:', err);
+    console.error('[scheduler] startup failed:', err);
   }
   interval = setInterval(() => {
     void tickOnce();
+    void tickMeetings();
   }, TICK_MS);
 }
 

@@ -3,6 +3,7 @@ import {
   appendMeetingEvent,
   appendTranscriptBlock,
   createMeeting,
+  listMeetings,
   readMeeting,
   writeMeeting,
   readTopic,
@@ -294,6 +295,27 @@ export async function resumeMeeting(id: string, now: Date = new Date()): Promise
   await writeMeeting(cur);
   await appendMeetingEvent(id, { at: now.toISOString(), type: 'resumed' });
   await advance(id);
+}
+
+export async function recoverMeetings(now: Date = new Date()): Promise<void> {
+  const all = await listMeetings();
+  for (const m of all) {
+    if (m.status === 'ended' || m.status === 'cancelled' || m.status === 'failed') continue;
+    const fresh: typeof m = {
+      ...m,
+      status: 'failed',
+      ended_at: now.toISOString(),
+      pause_reason: `crashed_during=${m.status}`
+    };
+    await writeMeeting(fresh);
+    await appendMeetingEvent(m.id, {
+      at: now.toISOString(),
+      type: 'crashed',
+      message: `crashed_during=${m.status}`
+    });
+    // Release any in-memory locks held by this meeting.
+    await releaseMeetingLocks(fresh);
+  }
 }
 
 export async function endMeeting(id: string, now: Date = new Date()): Promise<void> {
