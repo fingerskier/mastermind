@@ -1,6 +1,6 @@
 # Landsraad — Specification
 
-Status: v1 (council + councillor + jobs + shared & private memory + reflection + agent proposals + council templates + adapters + activity dashboard + schedules). High-level only. Implementation details live in `docs/` and in code.
+Status: v1 (council + councillor + jobs + shared & private memory + reflection + agent proposals + council templates + adapters + activity dashboard + schedules + meetings). High-level only. Implementation details live in `docs/` and in code.
 
 ---
 
@@ -130,6 +130,10 @@ A reusable, shareable definition of a council type — councillor roles, persona
 
 `templates/dogfood.template.json` is the in-repo built-in (replaces the previous imperative `scripts/dogfood-init.ts` seeder).
 
+### Meeting
+
+A multi-turn round-table among councillors with the director participating each round. The director picks a chair, a topic, and attendees. Each round the director speaks first (or skips), then attending councillors speak in randomized order. When the director ends the meeting, the chair writes a synthesis that is scanned for `<<MEMORY>>` / `<<JOB>>` blocks via the existing reflection plumbing. Topic, per-turn transcript, rolling summary, and synthesis are embedded into the memory index so future jobs can retrieve them. While running, the meeting holds the busy-slot for every attendee; jobs assigned to in-meeting councillors stay `queued` until the meeting ends.
+
 ### Dogfood Council
 
 A built-in council for testing Landsraad itself. The CLI command `npm run dogfood:init [path]` seeds the target directory (default `./dogfood`) with two `mock:local` councillors, one shared memory note, and one sample job. From there, `cd dogfood && npx landsraad` (or `LANDSRAAD_COUNCIL_ROOT=./dogfood npm run dev` from the repo) operates against it. This is what the director uses to exercise the app without burning real-CLI tokens.
@@ -147,6 +151,7 @@ A built-in council for testing Landsraad itself. The CLI command `npm run dogfoo
 9. **Per-job artifacts.** Each run leaves `input.md` (the assembled prompt), `transcript.md` (raw adapter output), `output.md` (final response or summary), `events.jsonl` (state transitions), and `job.json` (metadata, including `memory_slugs` and `shared_memory_slugs` for reflection-created entries).
 10. **Install / export templates.** `npx landsraad init <source>` and `npx landsraad export <out.json>` (or `/import` and `/export` in the UI). `npm run dogfood:init` installs `templates/dogfood.template.json` into `./dogfood`.
 11. **Schedules.** Declare future or recurring work via `/schedules` (or "Save as schedule" on `/jobs/new`). The in-process scheduler ticks every 30s, spawning jobs on the configured councillor.
+12. **Meetings.** Convene a round-table at `/meetings/new`. Director participates each round; councillors speak in random order; chair writes a synthesis on end that is parsed for `<<MEMORY>>` / `<<JOB>>` blocks. Topic, transcript, summary, and synthesis are embedded into the memory index.
 
 ## Storage Model
 
@@ -176,6 +181,14 @@ The council root is the current working directory of the Landsraad process. Over
   schedules/
     <schedule-id>.json           # one declaration per file
     <schedule-id>.events.jsonl   # fire / skip / error log
+  meetings/
+    <meeting-id>/                # meeting-id is timestamped + slugged
+      meeting.json               # id, title, chair_slug, attendees, status, window_k, *_at, memory_slugs?, shared_memory_slugs?, proposed_jobs?
+      topic.md                   # director's brief for the round-table
+      transcript.md              # per-turn blocks appended as the meeting progresses
+      summary.md                 # chair-written rolling summary of displaced turns
+      synthesis.md               # chair-written closing synthesis (scanned for <<MEMORY>>/<<JOB>>)
+      events.jsonl               # one line per state transition or turn event
   .index/
     embeddings.db                # sqlite-vec index; regenerable
 ```
@@ -213,6 +226,9 @@ The app never writes outside the council root. It never writes secrets to disk. 
 | `/schedules/new` | Create a schedule |
 | `/schedules/[id]` | Schedule detail: definition, next-N fires, recent events, spawned job links |
 | `/schedules/[id]/edit` | Edit a schedule |
+| `/meetings` | List meetings with status + round + turn count |
+| `/meetings/new` | Convene a meeting: title, topic, chair, attendees, window_k |
+| `/meetings/[id]` | Meeting detail: live transcript, director speak/skip, end / cancel / resume |
 
 A persistent header links back to `/`; the council home is the working surface.
 
