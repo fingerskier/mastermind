@@ -9,14 +9,19 @@
   onDestroy(() => { if (timer) clearInterval(timer); });
 
   function ageBg(created: string, jobs: Array<{ created_at: string }>): string {
-    if (jobs.length < 2) return 'hsl(120 35% 20% / 0.28)';
+    // Newest = warm beige tone matching --accent (#d6c08c, hsl ~38 45% 70%).
+    // Oldest = deep brown fading toward --bg (#0f1115).
+    if (jobs.length < 2) return 'hsl(38 40% 32% / 0.28)';
     const ts = jobs.map(j => new Date(j.created_at).getTime());
     const max = Math.max(...ts);
     const min = Math.min(...ts);
     const span = max - min;
-    const t = span === 0 ? 0 : (max - new Date(created).getTime()) / span;
-    const hue = 120 * (1 - t);
-    return `hsl(${hue.toFixed(0)} 35% 20% / 0.28)`;
+    const t = span === 0 ? 0 : (max - new Date(created).getTime()) / span; // 0 newest, 1 oldest
+    const hue = 38 - 8 * t;
+    const sat = 40 - 25 * t;
+    const light = 32 - 24 * t;
+    const alpha = 0.28 + 0.22 * t;
+    return `hsl(${hue.toFixed(0)} ${sat.toFixed(0)}% ${light.toFixed(0)}% / ${alpha.toFixed(2)})`;
   }
 
   function relTime(iso: string): string {
