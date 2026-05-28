@@ -133,7 +133,13 @@
                     <a class="job-card" href="/jobs/{j.id}" style="background: {ageBg(j.created_at, jobs)};">
                       <div class="job-title">
                         <span class="job-name">{j.title}</span>
-                        <span class="status status-{j.status}">{j.status}</span>
+                        <span class="status status-{j.status}" title={j.status} aria-label={j.status}>
+                          {#if j.status === 'succeeded'}✓
+                          {:else if j.status === 'failed'}✕
+                          {:else if j.status === 'running'}●
+                          {:else if j.status === 'cancelled'}⊘
+                          {:else}…{/if}
+                        </span>
                       </div>
                       <div class="job-meta">{new Date(j.created_at).toLocaleString()}</div>
                     </a>
@@ -247,11 +253,15 @@
   .btn { display: inline-block; padding: 0.5rem 0.9rem; border-radius: 6px; border: 1px solid var(--border); text-decoration: none; color: var(--fg); background: transparent; cursor: pointer; }
   .btn.primary { background: var(--accent); color: #0f1115; border-color: var(--accent); font-weight: 600; }
   .btn.danger { border-color: var(--danger); color: var(--danger); }
-  .status { flex-shrink: 0; font-size: 0.7em; padding: 0.05rem 0.4rem; border-radius: 999px; border: 1px solid var(--border); color: var(--muted); font-weight: 500; }
-  .status-running { color: var(--accent); border-color: var(--accent); }
-  .status-succeeded { color: #8bb98b; border-color: #4f6b4f; }
-  .status-failed { color: var(--danger); border-color: var(--danger); }
-  .status-cancelled { color: var(--muted); border-color: var(--border); }
+  .status {
+    flex-shrink: 0; display: inline-flex; align-items: center; justify-content: center;
+    width: 1.1em; height: 1.1em; font-size: 1em; line-height: 1; font-weight: 700;
+    color: var(--muted);
+  }
+  .status-running { color: #e0c060; animation: pulse 1.4s ease-in-out infinite; }
+  .status-succeeded { color: #8bb98b; }
+  .status-failed { color: var(--danger); }
+  .status-cancelled { color: var(--muted); }
   .dot.running { color: var(--accent); animation: pulse 1.4s ease-in-out infinite; }
   @keyframes pulse { 50% { opacity: 0.3; } }
   .badge {
