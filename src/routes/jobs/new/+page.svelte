@@ -5,6 +5,8 @@
   const initialSelected = $derived<string[]>(form?.councillor_slugs ?? data.preselect);
   let selected = $state<Set<string>>(new Set());
   $effect(() => { selected = new Set(initialSelected); });
+  let showSchedule = $state(false);
+  $effect(() => { if (form?.save_as === 'schedule') showSchedule = true; });
 
   function toggle(slug: string, checked: boolean) {
     const next = new Set(selected);
@@ -64,42 +66,50 @@
       <span>Brief</span>
       <textarea name="brief" rows="10" required>{form?.brief ?? ''}</textarea>
     </label>
-    <label class="check">
-      <input type="checkbox" name="start_now" checked />
-      <span>Start immediately</span>
-    </label>
-    <fieldset class="schedule">
-      <legend>
-        <label class="radio inline">
-          <input type="radio" name="save_as" value="job" checked={form?.save_as !== 'schedule'} />
-          Run now (default)
-        </label>
-        <label class="radio inline">
-          <input type="radio" name="save_as" value="schedule" checked={form?.save_as === 'schedule'} disabled={selected.size !== 1} />
-          Save as schedule {#if selected.size !== 1}<small>(pick exactly 1 councillor)</small>{/if}
-        </label>
-      </legend>
-      <div class="sched-fields">
-        <label class="radio inline"><input type="radio" name="sched_kind" value="recurring" checked /> Recurring (cron)</label>
-        <label class="radio inline"><input type="radio" name="sched_kind" value="once" /> One-shot</label>
-        <label>
-          <span>Cron expression</span>
-          <input name="sched_cron" placeholder="0 9 * * MON" value={form?.sched_cron ?? ''} />
-        </label>
-        <label>
-          <span>Or fire at (local time)</span>
-          <input name="sched_fire_at" type="datetime-local" value={form?.sched_fire_at ?? ''} />
-        </label>
-        <label class="check">
-          <input type="checkbox" name="sched_enabled" checked />
-          <span>Enabled</span>
-        </label>
-      </div>
-    </fieldset>
+    <input type="hidden" name="save_as" value={showSchedule ? 'schedule' : 'job'} />
+    <input type="hidden" name="start_now" value="on" />
+    {#if !showSchedule}
+      <button
+        type="button"
+        class="link disclosure"
+        onclick={() => (showSchedule = true)}
+        disabled={selected.size !== 1}
+      >
+        Schedule for later instead
+        {#if selected.size !== 1}<small>(pick exactly 1 councillor)</small>{/if}
+      </button>
+    {:else}
+      <fieldset class="schedule">
+        <legend>
+          Schedule
+          <button type="button" class="link" onclick={() => (showSchedule = false)}>Run now instead</button>
+        </legend>
+        <div class="sched-fields">
+          <label class="radio inline"><input type="radio" name="sched_kind" value="recurring" checked /> Recurring (cron)</label>
+          <label class="radio inline"><input type="radio" name="sched_kind" value="once" /> One-shot</label>
+          <label>
+            <span>Cron expression</span>
+            <input name="sched_cron" placeholder="0 9 * * MON" value={form?.sched_cron ?? ''} />
+          </label>
+          <label>
+            <span>Or fire at (local time)</span>
+            <input name="sched_fire_at" type="datetime-local" value={form?.sched_fire_at ?? ''} />
+          </label>
+          <label class="check">
+            <input type="checkbox" name="sched_enabled" checked />
+            <span>Enabled</span>
+          </label>
+        </div>
+      </fieldset>
+    {/if}
     <div class="actions">
       <a class="btn" href="/">Cancel</a>
       <button class="btn primary" type="submit" disabled={selected.size === 0}>
-        {selected.size > 1 ? `Create ${selected.size} jobs` : 'Create job'}
+        {#if showSchedule}
+          Create schedule
+        {:else}
+          {selected.size > 1 ? `Run ${selected.size} jobs now` : 'Run now'}
+        {/if}
       </button>
     </div>
   </form>
@@ -153,8 +163,17 @@
   .cl-meta { color: var(--muted); font-size: 0.9em; }
   .cl-meta code { background: rgba(255,255,255,0.04); padding: 0 0.3rem; border-radius: 4px; }
   fieldset.schedule { border: 1px dashed var(--border); border-radius: 8px; padding: 0.5rem 0.9rem 0.75rem; margin: 0; display: grid; gap: 0.5rem; }
-  fieldset.schedule legend { padding: 0 0.35rem; font-size: 0.9em; color: var(--muted); display: flex; gap: 1rem; }
+  fieldset.schedule legend { padding: 0 0.35rem; font-size: 0.9em; color: var(--muted); display: flex; gap: 1rem; align-items: center; }
   fieldset.schedule .sched-fields { display: grid; gap: 0.5rem; }
   label.radio.inline { display: inline-flex; align-items: center; gap: 0.35rem; }
   small { color: var(--muted); }
+  button.disclosure {
+    justify-self: start; background: none; border: none; padding: 0;
+    color: var(--accent); cursor: pointer; font: inherit; text-decoration: underline;
+  }
+  button.disclosure[disabled] { color: var(--muted); cursor: not-allowed; text-decoration: none; }
+  button.link {
+    background: none; border: none; padding: 0; color: var(--accent);
+    cursor: pointer; font: inherit; text-decoration: underline;
+  }
 </style>
