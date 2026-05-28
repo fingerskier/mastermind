@@ -1,10 +1,12 @@
 export interface ParsedMemoryBlock {
   title: string;
   body: string;
+  scope: 'private' | 'shared';
 }
 
 const BLOCK_RE = /<<MEMORY\b([^>]*)>>([\s\S]*?)<<\/MEMORY>>/g;
 const TITLE_RE = /title="([^"]*)"/;
+const ATTR_SCOPE_RE = /scope="([^"]*)"/;
 
 export function parseMemoryBlocks(text: string): ParsedMemoryBlock[] {
   const out: ParsedMemoryBlock[] = [];
@@ -17,7 +19,9 @@ export function parseMemoryBlocks(text: string): ParsedMemoryBlock[] {
     const title = titleMatch[1].trim();
     if (!title) continue;
     const body = match[2].replace(/^\n/, '').replace(/\s+$/, '');
-    out.push({ title, body });
+    const scopeRaw = ATTR_SCOPE_RE.exec(attrs)?.[1]?.trim();
+    const scope: 'private' | 'shared' = scopeRaw === 'shared' ? 'shared' : 'private';
+    out.push({ title, body, scope });
   }
   return out;
 }

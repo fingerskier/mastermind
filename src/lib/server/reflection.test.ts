@@ -10,7 +10,7 @@ describe('parseMemoryBlocks', () => {
     const out = parseMemoryBlocks(
       'preamble\n<<MEMORY title="Cash on hand">>\nbody one\n<</MEMORY>>\ntrailer'
     );
-    expect(out).toEqual([{ title: 'Cash on hand', body: 'body one' }]);
+    expect(out).toEqual([{ title: 'Cash on hand', body: 'body one', scope: 'private' }]);
   });
 
   it('parses multiple blocks', () => {
@@ -18,8 +18,8 @@ describe('parseMemoryBlocks', () => {
       '<<MEMORY title="A">>\naaa\n<</MEMORY>>\n<<MEMORY title="B">>\nbbb\n<</MEMORY>>'
     );
     expect(out).toEqual([
-      { title: 'A', body: 'aaa' },
-      { title: 'B', body: 'bbb' }
+      { title: 'A', body: 'aaa', scope: 'private' },
+      { title: 'B', body: 'bbb', scope: 'private' }
     ]);
   });
 
@@ -41,6 +41,32 @@ describe('parseMemoryBlocks', () => {
   it('trims trailing whitespace on body', () => {
     const out = parseMemoryBlocks('<<MEMORY title="X">>\nbody  \n\n<</MEMORY>>');
     expect(out[0].body).toBe('body');
+  });
+
+  it('defaults scope to "private" when attr is absent', () => {
+    const out = parseMemoryBlocks('<<MEMORY title="A">>\nbody\n<</MEMORY>>');
+    expect(out).toEqual([{ title: 'A', body: 'body', scope: 'private' }]);
+  });
+
+  it('returns scope "shared" when scope="shared"', () => {
+    const out = parseMemoryBlocks(
+      '<<MEMORY title="A" scope="shared">>\nbody\n<</MEMORY>>'
+    );
+    expect(out).toEqual([{ title: 'A', body: 'body', scope: 'shared' }]);
+  });
+
+  it('falls back to "private" for unknown scope values', () => {
+    const out = parseMemoryBlocks(
+      '<<MEMORY title="A" scope="team">>\nbody\n<</MEMORY>>'
+    );
+    expect(out[0].scope).toBe('private');
+  });
+
+  it('accepts scope in any attribute order', () => {
+    const out = parseMemoryBlocks(
+      '<<MEMORY scope="shared" title="A">>\nbody\n<</MEMORY>>'
+    );
+    expect(out[0]).toMatchObject({ title: 'A', scope: 'shared' });
   });
 });
 
