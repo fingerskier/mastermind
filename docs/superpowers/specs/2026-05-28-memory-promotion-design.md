@@ -5,7 +5,10 @@ Date: 2026-05-28
 
 ## Goal
 
-Let a councillor write directly to council-wide shared memory at emission time, via a `scope` attribute on the existing `<<MEMORY>>` block. `scope="shared"` writes straight to the shared `memory/` directory; `scope="private"` (default) keeps the current per-councillor behavior. No proposal layer, no review queue, no sidecar. Councillors are trusted; an introspective cleanup/dedupe job is a separate slice later.
+Let a councillor write directly to council-wide shared memory at emission time, via a `scope` attribute on the existing `<<MEMORY>>` block.
+`scope="shared"` writes straight to the shared `memory/` directory; `scope="private"` (default) keeps the current per-councillor behavior.
+No proposal layer, no review queue, no sidecar.
+Councillors are trusted; an introspective cleanup/dedupe job is a separate slice later.
 
 This closes the deferred design entry in `docs/OPEN_QUESTIONS.md` ("Option B — `scope` attribute on `<<MEMORY>>`") and supersedes spec #2625 (purge of `scope="shared"` from templates) — instead of purging, we make the attribute real.
 
@@ -17,14 +20,13 @@ body markdown
 <</MEMORY>>
 ```
 
-- `scope` is optional. Allowed values: `"private"` (default) and `"shared"`.
+- `scope` is optional.  Allowed values: `"private"` (default) and `"shared"`.
 - Unknown values fall back to `"private"` (forward-compat, same as other attrs).
 - All other parsing rules unchanged.
 
 ## Parser
 
 `src/lib/server/reflection.ts`:
-
 - `ParsedMemoryBlock` gains `scope: 'private' | 'shared'`.
 - New `ATTR_SCOPE_RE = /scope="([^"]*)"/`.
 - Default to `'private'`; explicit `"shared"` → `'shared'`; anything else → `'private'`.
@@ -56,7 +58,6 @@ export async function createSharedNoteAutoSuffix(input: UpsertNoteInput): Promis
 ```
 
 Semantics, mirroring `createPrivateNote`:
-
 - Slugify title.
 - If `<slug>.md` already exists in `memory/`, suffix with `-2`, `-3`, … until free.
 - Write the body (prepending `# <title>\n\n` if no leading `#`).
@@ -112,7 +113,6 @@ No new directories. Reflection writes land in the existing tree:
 ## Ordering & rollout
 
 Single PR, in test-first order:
-
 1. Parser change (+ tests).
 2. `createSharedNoteAutoSuffix` (+ tests).
 3. Runner integration + `shared_memory_slugs` (+ tests).

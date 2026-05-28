@@ -1,6 +1,6 @@
 {
   "name": "landsraad",
-  "version": "2026.5.27",
+  "version": "2026.5.28",
   "description": "Local-first AI council chamber: create councils and councillors from a SvelteKit app.",
   "type": "module",
   "bin": {
