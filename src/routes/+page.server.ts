@@ -10,6 +10,7 @@ import { listNotes } from '$lib/server/memory';
 import { listJobProposals } from '$lib/server/proposals';
 import { currentRuns } from '$lib/server/runner';
 import { scheduleSummary } from '$lib/server/scheduler';
+import { listMeetings } from '$lib/server/meetings';
 import { councilRoot } from '$lib/server/paths';
 import type { Job } from '$lib/types';
 import type { Actions, PageServerLoad } from './$types';
@@ -21,12 +22,16 @@ export const load: PageServerLoad = async () => {
     return { hasCouncil: false as const, cwd: councilRoot() };
   }
   const council = await readCouncilWithCouncillors();
-  const [jobs, notes, pendingProposals, schedules] = await Promise.all([
+  const [jobs, notes, pendingProposals, schedules, meetings] = await Promise.all([
     listJobs(),
     listNotes(),
     listJobProposals({ status: 'pending' }),
-    scheduleSummary()
+    scheduleSummary(),
+    listMeetings()
   ]);
+  const activeMeetingsCount = meetings.filter(
+    (m) => !['ended', 'cancelled', 'failed'].includes(m.status)
+  ).length;
   const running = new Set(currentRuns().map((r) => r.councillor));
   const recentByCouncillor: Record<string, Job[]> = {};
   for (const c of council.councillors) recentByCouncillor[c.slug] = [];
@@ -42,7 +47,9 @@ export const load: PageServerLoad = async () => {
     recentByCouncillor,
     running: Array.from(running),
     pendingProposalCount: pendingProposals.length,
-    schedules
+    schedules,
+    meetingsTotal: meetings.length,
+    activeMeetings: activeMeetingsCount
   };
 };
 

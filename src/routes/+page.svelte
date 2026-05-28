@@ -101,6 +101,16 @@
     {/if}
   </section>
 
+  <section class="meetings-line">
+    {#if data.activeMeetings === 0 && data.meetingsTotal === 0}
+      <a class="dim" href="/meetings">Meetings: none yet</a>
+    {:else}
+      <a href="/meetings">
+        Meetings: {data.activeMeetings} active · {data.meetingsTotal} total
+      </a>
+    {/if}
+  </section>
+
   <section>
     <div class="section-head">
       <h2>Councillors</h2>
@@ -278,8 +288,8 @@
     background: rgba(255,255,255,0.02); text-decoration: none; font-weight: 600;
   }
   .badge:hover { background: var(--accent); color: #0f1115; }
-  .schedules-line { margin: -0.75rem 0 1.25rem; font-size: 0.9em; }
-  .schedules-line a { color: var(--accent); text-decoration: none; }
-  .schedules-line a:hover { text-decoration: underline; }
-  .schedules-line .dim { color: var(--muted); }
+  .schedules-line, .meetings-line { margin: -0.75rem 0 1.25rem; font-size: 0.9em; }
+  .schedules-line a, .meetings-line a { color: var(--accent); text-decoration: none; }
+  .schedules-line a:hover, .meetings-line a:hover { text-decoration: underline; }
+  .schedules-line .dim, .meetings-line .dim { color: var(--muted); }
 </style>

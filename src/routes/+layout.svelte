@@ -12,6 +12,7 @@
   <a href="/" class="brand">Landsraad</a>
   {#if page.data?.hasCouncil}
     <nav class="links">
+      <a href="/meetings">Meetings</a>
       <a href="/schedules">Schedules</a>
       <a href="/import">Install template</a>
       <a href="/export">Export…</a>
