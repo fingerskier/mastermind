@@ -17,6 +17,7 @@ import {
 import { resolveAdapter, type ResolvedAdapter } from './adapters';
 import { buildReflectionPrompt, parseJobBlocks, parseMemoryBlocks } from './reflection';
 import { createPrivateNote } from './memory_private';
+import { createSharedNoteAutoSuffix } from './memory';
 import { createJobProposal } from './proposals';
 import type { Job } from '$lib/types';
 
@@ -96,11 +97,17 @@ async function reflectAfterSuccess(
   }
 
   const blocks = parseMemoryBlocks(reflectionOut);
-  const slugs: string[] = [];
+  const privateSlugs: string[] = [];
+  const sharedSlugs: string[] = [];
   for (const b of blocks) {
     try {
-      const note = await createPrivateNote(councillor.slug, { title: b.title, body: b.body });
-      slugs.push(note.slug);
+      if (b.scope === 'shared') {
+        const note = await createSharedNoteAutoSuffix({ title: b.title, body: b.body });
+        sharedSlugs.push(note.slug);
+      } else {
+        const note = await createPrivateNote(councillor.slug, { title: b.title, body: b.body });
+        privateSlugs.push(note.slug);
+      }
     } catch (err) {
       await appendEvent(job.id, {
         at: new Date().toISOString(),
@@ -110,14 +117,19 @@ async function reflectAfterSuccess(
     }
   }
 
+  const totalWritten = privateSlugs.length + sharedSlugs.length;
   await appendEvent(job.id, {
     at: new Date().toISOString(),
     type: 'reflected',
-    message: `wrote ${slugs.length} memor${slugs.length === 1 ? 'y' : 'ies'}`
+    message: `wrote ${totalWritten} memor${totalWritten === 1 ? 'y' : 'ies'}`
   });
 
   const persisted = await readJob(job.id);
-  await writeJob({ ...persisted, memory_slugs: slugs });
+  await writeJob({
+    ...persisted,
+    memory_slugs: privateSlugs,
+    shared_memory_slugs: sharedSlugs
+  });
 
   const jobBlocks = parseJobBlocks(reflectionOut);
   for (const jb of jobBlocks) {

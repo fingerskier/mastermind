@@ -35,6 +35,7 @@ export interface Job {
   exit_code: number | null;
   error: string | null;
   memory_slugs?: string[];
+  shared_memory_slugs?: string[];
   reflection_error?: string;
   spawned_by_schedule_id?: string | null;
 }

@@ -250,6 +250,51 @@ describe('runner reflection', () => {
     await runJobNow(job.id, { adapterOverride });
     expect(await listJobProposals({ status: 'pending' })).toEqual([]);
   });
+
+  it('writes shared memory when block has scope="shared"', async () => {
+    const reflection = '<<MEMORY title="Council Rule" scope="shared">>\nBe kind.\n<</MEMORY>>';
+    const adapterOverride = makeReflectionAdapter(reflection);
+    const job = await createJob({ title: 'Probe', brief: 'do thing', councillor_slug: 'alice' });
+    await runJobNow(job.id, { adapterOverride });
+    const { listNotes } = await import('./memory');
+    const shared = await listNotes();
+    expect(shared.map((n) => n.slug)).toEqual(['council-rule']);
+    const privates = await listPrivateNotes('alice');
+    expect(privates).toEqual([]);
+    const final = await readJob(job.id);
+    expect(final.shared_memory_slugs).toEqual(['council-rule']);
+    expect(final.memory_slugs ?? []).toEqual([]);
+  });
+
+  it('writes one private + one shared for mixed blocks', async () => {
+    const reflection = [
+      '<<MEMORY title="Private Lesson">>',
+      'just for me',
+      '<</MEMORY>>',
+      '<<MEMORY title="Council Rule" scope="shared">>',
+      'for everyone',
+      '<</MEMORY>>'
+    ].join('\n');
+    const adapterOverride = makeReflectionAdapter(reflection);
+    const job = await createJob({ title: 'Mix', brief: 'm', councillor_slug: 'alice' });
+    await runJobNow(job.id, { adapterOverride });
+    const { listNotes } = await import('./memory');
+    expect((await listNotes()).map((n) => n.slug)).toEqual(['council-rule']);
+    expect((await listPrivateNotes('alice')).map((n) => n.slug)).toEqual(['private-lesson']);
+    const final = await readJob(job.id);
+    expect(final.memory_slugs).toEqual(['private-lesson']);
+    expect(final.shared_memory_slugs).toEqual(['council-rule']);
+  });
+
+  it('treats unknown scope value as private', async () => {
+    const reflection = '<<MEMORY title="Misnamed" scope="team">>\nbody\n<</MEMORY>>';
+    const adapterOverride = makeReflectionAdapter(reflection);
+    const job = await createJob({ title: 'P', brief: 'b', councillor_slug: 'alice' });
+    await runJobNow(job.id, { adapterOverride });
+    const { listNotes } = await import('./memory');
+    expect(await listNotes()).toEqual([]);
+    expect((await listPrivateNotes('alice')).map((n) => n.slug)).toEqual(['misnamed']);
+  });
 });
 
 describe('runner reflection — next job sees prior memory', () => {
