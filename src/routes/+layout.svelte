@@ -1,7 +1,12 @@
 <script lang="ts">
   import { page } from '$app/state';
   let { children } = $props();
+  let title = $derived(page.data?.councilName ? `${page.data.councilName} — Landsraad` : 'Landsraad');
 </script>
+
+<svelte:head>
+  <title>{title}</title>
+</svelte:head>
 
 <header>
   <a href="/" class="brand">Landsraad</a>

@@ -5,8 +5,8 @@
 //   landsraad export <out> ...   -> export the current council to a template
 
 import { fileURLToPath } from 'node:url';
-import { dirname, resolve } from 'node:path';
-import { existsSync } from 'node:fs';
+import { dirname, resolve, basename } from 'node:path';
+import { existsSync, readFileSync } from 'node:fs';
 import { spawn } from 'node:child_process';
 import { platform } from 'node:os';
 import { findFreePort } from './find-port.js';
@@ -19,6 +19,30 @@ const DEFAULT_PORT = 10191;
 const PORT_SCAN_RANGE = 100;
 
 const [, , sub, ...rest] = process.argv;
+
+function readCouncilName(cwd) {
+  try {
+    const file = resolve(cwd, 'council.json');
+    if (!existsSync(file)) return null;
+    const data = JSON.parse(readFileSync(file, 'utf8'));
+    const name = typeof data?.name === 'string' ? data.name.trim() : '';
+    return name || null;
+  } catch {
+    return null;
+  }
+}
+
+function setTerminalTitle(title) {
+  if (!title) return;
+  if (!process.stdout.isTTY) return;
+  try {
+    // OSC 0: set window + icon title. Works on Windows Terminal, PowerShell,
+    // modern cmd (VT), xterm, iTerm, etc.
+    process.stdout.write(`\x1b]0;${title}\x07`);
+  } catch {
+    // best-effort
+  }
+}
 
 function openInBrowser(url) {
   const plat = platform();
@@ -149,6 +173,8 @@ if (sub === 'init') {
 } else if (sub === 'reset') {
   task = runBundled('build/cli/reset.mjs');
 } else {
+  const councilName = readCouncilName(process.cwd()) ?? basename(process.cwd());
+  setTerminalTitle(`${councilName} — Landsraad`);
   task = runBundled('build/index.js', { autoOpen: true });
 }
 
