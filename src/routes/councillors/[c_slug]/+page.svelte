@@ -5,6 +5,7 @@
   const c = $derived(data.councillor);
   const adapters = $derived(data.adapters);
   const memories = $derived(data.memories);
+  const proposals = $derived(data.proposals);
   const currentAdapter = $derived(c.adapter ?? '');
   const isKnown = $derived(currentAdapter === '' || adapters.some((a) => a.id === currentAdapter));
   const currentNote = $derived(adapters.find((a) => a.id === currentAdapter)?.note ?? '');
@@ -76,6 +77,49 @@
     <div class="persona-md">{@html personaHtml}</div>
   {:else}
     <p class="empty">No persona written yet.</p>
+  {/if}
+</section>
+
+<section>
+  <div class="section-head">
+    <h2>Suggested jobs</h2>
+    <a class="muted-link" href="/proposals">All proposals →</a>
+  </div>
+  {#if proposals.length === 0}
+    <p class="empty">No pending suggestions for this councillor.</p>
+  {:else}
+    <ul class="prop-list">
+      {#each proposals as p (p.id)}
+        <li class="prop-card">
+          <div class="prop-head">
+            <div>
+              <div class="prop-title">{p.title}</div>
+              <div class="prop-meta">
+                from <code>{p.proposed_by}</code>
+                {#if p.target_councillor === 'all'} · <span class="chip">all councillors</span>{/if}
+                · priority <code>{p.priority}</code>
+                · source <a href="/jobs/{p.source_job_id}">{p.source_job_id}</a>
+              </div>
+            </div>
+          </div>
+          <pre class="brief">{p.brief}</pre>
+          <div class="actions">
+            <form method="POST" action="?/approveProposal" class="approve-form">
+              <input type="hidden" name="id" value={p.id} />
+              <label class="inline">
+                <input type="checkbox" name="start_now" /> start now
+              </label>
+              <button type="submit" class="btn primary">Approve</button>
+            </form>
+            <form method="POST" action="?/rejectProposal" class="reject-form">
+              <input type="hidden" name="id" value={p.id} />
+              <input type="text" name="reason" placeholder="reason (optional)" />
+              <button type="submit" class="btn danger">Reject</button>
+            </form>
+          </div>
+        </li>
+      {/each}
+    </ul>
   {/if}
 </section>
 
@@ -179,4 +223,17 @@
   .mem-card:hover { border-color: var(--accent); }
   .mem-title { font-weight: 500; }
   .mem-meta { color: var(--muted); font-size: 0.8em; margin-top: 0.2rem; }
+  .muted-link { color: var(--muted); text-decoration: none; font-size: 0.85em; }
+  .muted-link:hover { color: var(--accent); }
+  .prop-list { list-style: none; padding: 0; display: grid; gap: 0.75rem; }
+  .prop-card { border: 1px solid var(--border); border-radius: 8px; padding: 0.85rem 1rem; display: grid; gap: 0.6rem; }
+  .prop-head { display: flex; justify-content: space-between; gap: 1rem; align-items: flex-start; }
+  .prop-title { font-weight: 600; }
+  .prop-meta { color: var(--muted); font-size: 0.85em; margin-top: 0.15rem; }
+  .brief { white-space: pre-wrap; background: rgba(255,255,255,0.02); border: 1px solid var(--border); border-radius: 6px; padding: 0.6rem 0.7rem; margin: 0; font-size: 0.9em; }
+  .actions { display: flex; flex-wrap: wrap; gap: 1rem; align-items: center; }
+  .approve-form, .reject-form { display: flex; gap: 0.5rem; align-items: center; margin: 0; }
+  .inline { display: inline-flex; gap: 0.4rem; align-items: center; color: var(--muted); font-size: 0.9em; }
+  .reject-form input[type="text"] { background: #1a1d24; color: var(--fg); border: 1px solid var(--border); border-radius: 6px; padding: 0.4rem 0.6rem; }
+  .chip { font-size: 0.75em; padding: 0.05rem 0.4rem; border-radius: 999px; border: 1px solid var(--border); color: var(--muted); }
 </style>
