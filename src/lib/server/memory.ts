@@ -50,6 +50,40 @@ export async function readNote(slug: string): Promise<MemoryNote> {
   };
 }
 
+function resolveAvailableSlug(baseSlug: string): string {
+  let candidate = baseSlug;
+  let n = 2;
+  while (existsSync(noteFile(candidate))) {
+    candidate = `${baseSlug}-${n}`;
+    n++;
+  }
+  return candidate;
+}
+
+export async function createSharedNoteAutoSuffix(input: UpsertNoteInput): Promise<MemoryNote> {
+  if (!hasCouncil()) throw new Error('No council exists in the current directory.');
+  const title = input.title.trim();
+  if (!title) throw new Error('Note title is required.');
+  await mkdir(memoryDir(), { recursive: true });
+  const baseSlug = slugify(title);
+  const slug = resolveAvailableSlug(baseSlug);
+  const file = noteFile(slug);
+  const body = input.body.trimStart().startsWith('#')
+    ? input.body
+    : `# ${title}\n\n${input.body}`;
+  await writeFile(file, body, 'utf8');
+  const note = await readNote(slug);
+  await indexUpsert({
+    kind: 'memory',
+    ref_id: slug,
+    text: note.body,
+    source_path: file,
+    source_mtime: note.updated_at,
+    title: note.title
+  });
+  return note;
+}
+
 export async function createNote(input: UpsertNoteInput): Promise<MemoryNote> {
   if (!hasCouncil()) throw new Error('No council exists in the current directory.');
   const title = input.title.trim();

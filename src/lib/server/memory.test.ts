@@ -62,4 +62,32 @@ describe('memory', () => {
     expect(ctx).toContain('a body');
     expect(ctx).toContain('Beta');
   });
+
+  it('createSharedNoteAutoSuffix writes a new note when slug is free', async () => {
+    const { createSharedNoteAutoSuffix } = await import('./memory');
+    const n = await createSharedNoteAutoSuffix({ title: 'House Rules', body: 'be kind' });
+    expect(n.slug).toBe('house-rules');
+    expect((await readNote('house-rules')).body).toContain('be kind');
+  });
+
+  it('createSharedNoteAutoSuffix suffixes on slug collision', async () => {
+    const { createSharedNoteAutoSuffix } = await import('./memory');
+    await createSharedNoteAutoSuffix({ title: 'Dup', body: 'first' });
+    const second = await createSharedNoteAutoSuffix({ title: 'Dup', body: 'second' });
+    expect(second.slug).toBe('dup-2');
+    const third = await createSharedNoteAutoSuffix({ title: 'Dup', body: 'third' });
+    expect(third.slug).toBe('dup-3');
+  });
+
+  it('createSharedNoteAutoSuffix prepends "# title" when body has no leading header', async () => {
+    const { createSharedNoteAutoSuffix } = await import('./memory');
+    const n = await createSharedNoteAutoSuffix({ title: 'Naked', body: 'plain body' });
+    expect(n.body.startsWith('# Naked')).toBe(true);
+    expect(n.body).toContain('plain body');
+  });
+
+  it('createNote (strict) still throws on collision — unchanged', async () => {
+    await createNote({ title: 'Strict', body: 'first' });
+    await expect(createNote({ title: 'Strict', body: 'second' })).rejects.toThrow(/already exists/);
+  });
 });
