@@ -114,10 +114,8 @@ brief markdown
 <</JOB>>
 ```
 
-- **`<<MEMORY>>`** — applied directly. Written to the councillor's private memory dir; indexed under `memory_private`. Title collisions get a `-2`, `-3` suffix. The block parser is regex-tolerant of leading whitespace and trailing prose; unrecognized tags are ignored (forward-compat).
+- **`<<MEMORY>>`** — applied directly. Defaults to the councillor's private memory dir (indexed under `memory_private`). `scope="shared"` writes to the council-wide `memory/` dir instead (indexed under `memory`). Title collisions in either scope get a `-2`, `-3` suffix. The block parser is regex-tolerant of leading whitespace and trailing prose; unrecognized tags are ignored (forward-compat). Cleanup/dedupe of repeated shared writes is a deferred follow-up.
 - **`<<JOB>>`** — lands as a *proposal*, not a direct mutation. The host writes `<council>/proposals/jobs/<timestamp>-<slug>.json` with `status: "pending"` and appends a `proposed_job` event to the source job. The director reviews at `/proposals` and approves (creating the job via the normal job-creation path) or rejects. Unknown `councillor` slugs are flagged in the review UI for reassignment before approval. The review-queue gate is the only loop-breaker; no automated cap in v1.
-
-Memory promotion (private → shared) is a known follow-up — design deferred until first real promote desire surfaces; both `<<PROMOTE>>` and `scope="shared"` on `<<MEMORY>>` are candidate forms.
 
 ### Roster
 
@@ -225,7 +223,6 @@ A persistent header links back to `/`; the council home is the working surface.
 - Schedule proposals from reflection (`<<SCHEDULE …>>`)
 - Schedule export/import in council templates
 - Projects (a layer above jobs that group related work)
-- Memory promotion (private → shared) — design candidates (`<<PROMOTE>>` block vs. `<<MEMORY scope="shared">>`) are documented; pick after first real promote desire
 - Memory TTL / decay / consolidation (sleep/dream)
 - Promote-to-shared, auto-approval / per-councillor trust tiers, mid-job proposals, cross-council proposal sharing
 - Per-councillor reflection-prompt overrides

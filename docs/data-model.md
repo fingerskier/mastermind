@@ -82,6 +82,8 @@ One markdown file per shared note. First `# heading` is the title; rest is the b
 
 One markdown file per private memory entry. Same format as shared notes. Created exclusively by reflection (`<<MEMORY>>` blocks parsed from a successful job's reflection output). Edit and delete via the UI; no manual-create form in v1.
 
+A `<<MEMORY scope="shared">>` block in the same reflection output routes the entry to `memory/<entry-slug>.md` (shared) instead of the councillor's private dir — so a single reflection pass may write to either tier depending on each block's `scope` attribute.
+
 ## `jobs/<job-id>/job.json`
 
 ```json

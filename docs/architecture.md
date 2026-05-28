@@ -64,14 +64,13 @@ All state lives on disk. The server reads and writes synchronously to user input
 
 Section headers are always emitted, even when a section is empty, so the model sees a stable shape. A global character budget (`MEMORY_CHAR_BUDGET`) evicts the lowest-scoring memory entries until total length fits. If the index is empty or embedding fails, assembly falls back to "all shared notes verbatim" so a freshly-installed council still works.
 
-After a job transitions to `succeeded` and `reflect: true`, the runner makes one extra adapter call with the reflection prompt, parses any `<<MEMORY>>` and `<<JOB>>` blocks, writes private memory entries (indexed under `memory_private`), and persists `<<JOB>>` blocks as pending proposals. Reflection failure is non-fatal.
+After a job transitions to `succeeded` and `reflect: true`, the runner makes one extra adapter call with the reflection prompt, parses any `<<MEMORY>>` and `<<JOB>>` blocks, writes private memory entries (indexed under `memory_private`), and persists `<<JOB>>` blocks as pending proposals. Blocks with `scope="shared"` are written to the council-wide `memory/` dir (indexed under `memory`) instead of the councillor's private dir — a single reflection pass can mix private and shared writes. Reflection failure is non-fatal.
 
 ## Future surfaces (not built yet)
 
 When the next phase lands, expect to add:
 
 - SDK adapters (`sdk:anthropic`, `sdk:openai`) — same `Adapter` interface, no runner changes.
-- Memory promotion (private → shared) — design candidates documented in `SPECIFICATION.md` and `docs/OPEN_QUESTIONS.md`.
 - Sleep/dream consolidation pass over memories.
 - `src/routes/api/runs/...` — SSE endpoints for live run feedback (today the UI polls).
 - A separate worker process for the scheduler, if multi-user / multi-process becomes a concern (today the tick loop runs in the SvelteKit Node process).
