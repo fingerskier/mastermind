@@ -99,11 +99,13 @@ A `<<MEMORY scope="shared">>` block in the same reflection output routes the ent
   "exit_code": 0,
   "error": null,
   "memory_slugs": ["q1-fcf-watchlist", "vendor-renegotiation-window"],
+  "shared_memory_slugs": ["q1-board-update"],
   "reflection_error": null
 }
 ```
 
 - `memory_slugs` — slugs of private memory entries created by this job's reflection (omitted if none).
+- `shared_memory_slugs` — slugs of shared council memory entries created by this job's reflection from `<<MEMORY scope="shared">>` blocks (omitted if none).
 - `reflection_error` — short message if reflection itself failed (the job still counts as `succeeded`).
 
 `events.jsonl` event types include `created`, `started`, `stdout`, `stderr`, `succeeded`, `failed`, `cancelled`, `note`, `reflected`, `reflection_failed`, and `proposed_job`.

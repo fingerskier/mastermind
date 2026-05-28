@@ -141,10 +141,10 @@ A built-in council for testing Landsraad itself. The CLI command `npm run dogfoo
 3. **Manage councillors.** CRUD on a councillor's name, role, routing_hint, persona, adapter string, and `reflect` opt-out flag.
 4. **Manage shared memory.** CRUD on `*.md` notes under `memory/`.
 5. **Create and run jobs.** Pick a councillor, write a brief, submit. The runner picks up queued jobs and invokes the councillor's adapter. Status updates land on disk; the UI polls for live updates while a job is running.
-6. **Reflection.** Successful jobs trigger one extra adapter call that may emit `<<MEMORY>>` (applied directly to private memory) and `<<JOB>>` blocks (proposals).
+6. **Reflection.** Successful jobs trigger one extra adapter call that may emit `<<MEMORY>>` (applied directly to private memory; `scope="shared"` routes to council-wide memory instead) and `<<JOB>>` blocks (proposals).
 7. **Review proposals.** `/proposals` lists pending `<<JOB>>` proposals with approve / reject actions; approval routes through the same job-creation path as the UI.
 8. **Activity view.** The council page shows each councillor's recent jobs with status badges and timestamps.
-9. **Per-job artifacts.** Each run leaves `input.md` (the assembled prompt), `transcript.md` (raw adapter output), `output.md` (final response or summary), `events.jsonl` (state transitions), and `job.json` (metadata, including `memory_slugs` for reflection-created entries).
+9. **Per-job artifacts.** Each run leaves `input.md` (the assembled prompt), `transcript.md` (raw adapter output), `output.md` (final response or summary), `events.jsonl` (state transitions), and `job.json` (metadata, including `memory_slugs` and `shared_memory_slugs` for reflection-created entries).
 10. **Install / export templates.** `npx landsraad init <source>` and `npx landsraad export <out.json>` (or `/import` and `/export` in the UI). `npm run dogfood:init` installs `templates/dogfood.template.json` into `./dogfood`.
 11. **Schedules.** Declare future or recurring work via `/schedules` (or "Save as schedule" on `/jobs/new`). The in-process scheduler ticks every 30s, spawning jobs on the configured councillor.
 
@@ -165,7 +165,7 @@ The council root is the current working directory of the Landsraad process. Over
     <note-slug>.md               # shared notes
   jobs/
     <job-id>/                    # job-id is timestamped + slugged
-      job.json                   # id, title, councillor_slug, status, *_at, exit_code?, memory_slugs?
+      job.json                   # id, title, councillor_slug, status, *_at, exit_code?, memory_slugs?, shared_memory_slugs?
       input.md                   # assembled prompt sent to the adapter
       transcript.md              # raw stdout (and stderr) from the adapter
       output.md                  # final response (often === transcript.md, possibly trimmed)
@@ -224,7 +224,7 @@ A persistent header links back to `/`; the council home is the working surface.
 - Schedule export/import in council templates
 - Projects (a layer above jobs that group related work)
 - Memory TTL / decay / consolidation (sleep/dream)
-- Promote-to-shared, auto-approval / per-councillor trust tiers, mid-job proposals, cross-council proposal sharing
+- Promote-existing-private → shared (only emission-time `scope="shared"` ships); auto-approval / per-councillor trust tiers; mid-job proposals; cross-council proposal sharing
 - Per-councillor reflection-prompt overrides
 - Memory-budget UI; per-job opt-out of memory inclusion
 - Authenticated template fetch, template registry / marketplace, single-action "publish to gist"
