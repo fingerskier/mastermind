@@ -5,7 +5,7 @@ import {
   hasCouncil,
   readCouncilWithCouncillors
 } from '$lib/server/councils';
-import { listJobs, readOutputSlug } from '$lib/server/jobs';
+import { listJobs } from '$lib/server/jobs';
 import { listNotes } from '$lib/server/memory';
 import { listJobProposals } from '$lib/server/proposals';
 import { currentRuns } from '$lib/server/runner';
@@ -15,8 +15,6 @@ import type { Job } from '$lib/types';
 import type { Actions, PageServerLoad } from './$types';
 
 const RECENT_JOBS_PER_COUNCILLOR = 5;
-
-export type RecentJob = Job & { slug?: string };
 
 export const load: PageServerLoad = async () => {
   if (!hasCouncil()) {
@@ -30,20 +28,13 @@ export const load: PageServerLoad = async () => {
     scheduleSummary()
   ]);
   const running = new Set(currentRuns().map((r) => r.councillor));
-  const recentByCouncillor: Record<string, RecentJob[]> = {};
+  const recentByCouncillor: Record<string, Job[]> = {};
   for (const c of council.councillors) recentByCouncillor[c.slug] = [];
   for (const j of jobs) {
     const bucket = recentByCouncillor[j.councillor_slug];
     if (!bucket) continue;
     if (bucket.length < RECENT_JOBS_PER_COUNCILLOR) bucket.push(j);
   }
-  await Promise.all(
-    Object.values(recentByCouncillor)
-      .flat()
-      .map(async (j) => {
-        if (j.status === 'succeeded') j.slug = await readOutputSlug(j.id, 100);
-      })
-  );
   return {
     hasCouncil: true as const,
     council,
