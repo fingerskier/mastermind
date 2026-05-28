@@ -214,6 +214,7 @@
     border-radius: 8px;
     padding: 1rem;
     background: rgba(255, 255, 255, 0.01);
+    min-width: 0;
   }
   .col-head { margin-bottom: 0.85rem; }
   .col-head-row { display: flex; justify-content: space-between; align-items: center; gap: 0.5rem; }
@@ -233,14 +234,15 @@
   .col-sub { color: var(--muted); font-size: 0.85em; margin-top: 0.25rem; }
   .col-empty { color: var(--muted); font-size: 0.9em; margin: 0; padding: 0.5rem 0 0; }
 
-  .job-list { list-style: none; padding: 0; margin: 0; display: grid; gap: 0.5rem; }
+  .job-list { list-style: none; padding: 0; margin: 0; display: grid; grid-template-columns: minmax(0, 1fr); gap: 0.5rem; }
   .job-card {
     display: block; border: 1px solid var(--border); border-radius: 6px;
     padding: 0.55rem 0.7rem; text-decoration: none; color: var(--fg);
     background: rgba(255, 255, 255, 0.015);
+    overflow: hidden;
   }
   .job-card:hover { border-color: var(--accent); }
-  .job-title { display: flex; justify-content: space-between; gap: 0.5rem; align-items: center; font-size: 0.9em; }
+  .job-title { display: flex; justify-content: space-between; gap: 0.5rem; align-items: center; font-size: 0.9em; min-width: 0; }
   .job-name { font-weight: 500; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; }
   .job-meta { color: var(--muted); font-size: 0.75em; margin-top: 0.2rem; }
 
