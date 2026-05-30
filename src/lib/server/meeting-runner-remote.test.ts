@@ -1,0 +1,62 @@
+import { describe, it, expect, beforeEach, vi } from 'vitest';
+import { mkdtempSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
+
+const summonMock = vi.fn();
+vi.mock('./meeting-remote', () => ({ summonRemoteTurn: (...args: unknown[]) => summonMock(...args) }));
+vi.mock('./peers', async (orig) => {
+  const actual = (await orig()) as object;
+  return { ...actual, resolvePeerPort: vi.fn(async () => 10192) };
+});
+
+import { startMeeting, directorSpeak, resumeMeeting } from './meeting-runner';
+import { readMeeting, readTranscript } from './meetings';
+import { createCouncil } from './councils';
+import { createCouncillor } from './councillors';
+
+const remote = { council_slug: 'ops', councillor_slug: 'gurney', cwd: '/ops', label: 'Gurney' };
+
+describe('cross-council meeting turns', () => {
+  beforeEach(async () => {
+    process.env.LANDSRAAD_COUNCIL_ROOT = mkdtempSync(join(tmpdir(), 'landsraad-mrr-'));
+    const { _resetForTests } = await import('./councillor-lock');
+    _resetForTests();
+    summonMock.mockReset();
+    await createCouncil({ name: 'Eng', description: '' });
+    await createCouncillor({ name: 'Leto', role: 'duke', routing_hint: '', adapter: 'mock:local', persona: '' });
+  });
+
+  it('summons a remote attendee and appends its turn to the transcript', async () => {
+    summonMock.mockResolvedValue({ ok: true, text: 'remote says hi', duration_ms: 5 });
+    const m = await startMeeting({ title: 'S', topic: 't', chair_slug: 'leto', attendees: ['leto'], window_k: 2, remote_attendees: [remote] });
+    await directorSpeak(m.id, 'kickoff');
+    const tx = await readTranscript(m.id);
+    expect(summonMock).toHaveBeenCalled();
+    expect(tx).toContain('ops:gurney');
+    expect(tx).toContain('remote says hi');
+    const fresh = await readMeeting(m.id);
+    expect(fresh.status).not.toBe('paused');
+  });
+
+  it('pauses with remote_unreachable when the peer is gone', async () => {
+    summonMock.mockResolvedValue({ ok: false, reason: 'unreachable', detail: 'gone' });
+    const m = await startMeeting({ title: 'S', topic: 't', chair_slug: 'leto', attendees: ['leto'], window_k: 2, remote_attendees: [remote] });
+    await directorSpeak(m.id, 'kickoff');
+    const fresh = await readMeeting(m.id);
+    expect(fresh.status).toBe('paused');
+    expect(fresh.pause_reason).toBe('remote_unreachable:ops');
+    expect(fresh.remaining_this_round).toContain('ops:gurney');
+  });
+
+  it('pauses with remote_busy on a 409 and remote_turn_failed on a failed turn', async () => {
+    summonMock.mockResolvedValue({ ok: false, reason: 'busy', detail: 'busy' });
+    const m = await startMeeting({ title: 'S', topic: 't', chair_slug: 'leto', attendees: ['leto'], window_k: 2, remote_attendees: [remote] });
+    await directorSpeak(m.id, 'kickoff');
+    expect((await readMeeting(m.id)).pause_reason).toBe('remote_busy:ops:gurney');
+
+    summonMock.mockResolvedValue({ ok: false, reason: 'turn_failed', detail: 'boom' });
+    await resumeMeeting(m.id);
+    expect((await readMeeting(m.id)).pause_reason).toBe('remote_turn_failed:ops:gurney');
+  });
+});

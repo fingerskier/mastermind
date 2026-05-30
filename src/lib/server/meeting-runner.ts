@@ -12,10 +12,13 @@ import {
   readTranscript as readTx,
   parseTranscript,
   lastKTurns,
+  remoteToken,
   type NewMeetingInput
 } from './meetings';
-import type { Meeting } from '$lib/types';
+import type { Meeting, RemoteAttendee } from '$lib/types';
 import { readCouncillor } from './councillors';
+import { summonRemoteTurn } from './meeting-remote';
+import { resolvePeerPort } from './peers';
 import { resolveAdapter } from './adapters';
 import { runAdapter } from './adapters/runAdapter';
 import { councilRoot } from './paths';
@@ -119,7 +122,13 @@ async function buildTurnPrompt(meetingId: string, speakerSlug: string): Promise<
 }
 
 export async function startMeeting(input: NewMeetingInput, now: Date = new Date()): Promise<Meeting> {
-  // Pre-flight: every attendee must be free. Use a probe holder we immediately release.
+  // Pre-flight: validate remotes are reachable.
+  for (const r of input.remote_attendees ?? []) {
+    const port = await resolvePeerPort(r.cwd);
+    if (port === null) throw new Error(`Cannot start meeting: remote council at ${r.cwd} (${r.label}) is not running.`);
+  }
+
+  // Pre-flight: every local attendee must be free. Use a probe holder we immediately release.
   const probe = { kind: 'meeting' as const, id: 'PROBE' };
   const busy: string[] = [];
   for (const slug of input.attendees) {
@@ -181,6 +190,10 @@ export async function directorSkip(id: string, now: Date = new Date()): Promise<
   await advance(id);
 }
 
+function findRemote(m: Meeting, token: string): RemoteAttendee | undefined {
+  return (m.remote_attendees ?? []).find((r) => remoteToken(r) === token);
+}
+
 export async function advance(id: string): Promise<void> {
   if (inFlight.has(id)) return;
   let m = await readMeeting(id);
@@ -195,7 +208,7 @@ export async function advance(id: string): Promise<void> {
 
   if (m.remaining_this_round.length === 0) {
     m.current_round += 1;
-    const next = m.attendees.slice();
+    const next = [...m.attendees, ...(m.remote_attendees ?? []).map(remoteToken)];
     for (let i = next.length - 1; i > 0; i--) {
       const j = Math.floor(Math.random() * (i + 1));
       [next[i], next[j]] = [next[j], next[i]];
@@ -215,6 +228,77 @@ export async function advance(id: string): Promise<void> {
 
   await refreshSummaryIfNeeded(id);
 
+  const remote = findRemote(m, speakerSlug);
+  if (remote) {
+    // ── Remote attendee path ──────────────────────────────────────────────────
+    const controller = new AbortController();
+    inFlight.set(id, controller);
+    try {
+      const after = await readMeeting(id);
+      const topic = await readTopic(id);
+      const summary = await readSummary(id);
+      const transcript = await readTx(id);
+      const recent_turns = lastKTurns(transcript, after.window_k).map(
+        (t) => `## Turn ${t.turnIndex} — ${t.speaker} — ${t.at}\n\n${t.body}`
+      );
+
+      const result = await summonRemoteTurn({
+        cwd: remote.cwd,
+        councillor_slug: remote.councillor_slug,
+        meeting_id: id,
+        host_council: after.chair_slug,
+        context: {
+          title: after.title,
+          topic,
+          summary,
+          recent_turns,
+          speaker_instruction: `You are ${remote.councillor_slug}. Speak now.`
+        },
+        signal: controller.signal
+      });
+
+      if (controller.signal.aborted) {
+        return;
+      }
+
+      if (!result.ok) {
+        const { council_slug, councillor_slug } = remote;
+        const pause_reason =
+          result.reason === 'unreachable'
+            ? `remote_unreachable:${council_slug}`
+            : result.reason === 'busy'
+              ? `remote_busy:${council_slug}:${councillor_slug}`
+              : `remote_turn_failed:${council_slug}:${councillor_slug}`;
+        const cur = await readMeeting(id);
+        cur.status = 'paused';
+        cur.pause_reason = pause_reason;
+        cur.remaining_this_round.unshift(speakerSlug);
+        await writeMeeting(cur);
+        await appendMeetingEvent(id, { at: new Date().toISOString(), type: 'turn_failed', speaker: speakerSlug, message: pause_reason });
+        await appendMeetingEvent(id, { at: new Date().toISOString(), type: 'paused', message: pause_reason });
+        return;
+      }
+
+      const cur = await readMeeting(id);
+      cur.total_turns += 1;
+      const at = new Date().toISOString();
+      await appendTranscriptBlock(id, {
+        turnIndex: cur.total_turns,
+        speaker: speakerSlug,
+        at,
+        body: result.text
+      });
+      await writeMeeting(cur);
+      await appendMeetingEvent(id, { at, type: 'turn_finished', speaker: speakerSlug, turn_index: cur.total_turns });
+    } finally {
+      inFlight.delete(id);
+    }
+
+    await advance(id);
+    return;
+  }
+
+  // ── Local attendee path ───────────────────────────────────────────────────
   const councillor = await readCouncillor(speakerSlug);
   const adapter = resolveAdapter(councillor.adapter);
   if (!adapter) {
