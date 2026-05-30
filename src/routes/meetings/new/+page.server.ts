@@ -3,11 +3,15 @@ import { fail, redirect } from '@sveltejs/kit';
 import { listCouncillors } from '$lib/server/councillors';
 import { startMeeting } from '$lib/server/meeting-runner';
 import { MEETING_WINDOW_K_DEFAULT } from '$lib/server/config';
+import { listPeers } from '$lib/server/peers';
+import { councilRoot } from '$lib/server/paths';
+import type { RemoteAttendee } from '$lib/types';
 
 export const load: PageServerLoad = async () => {
   return {
     councillors: await listCouncillors(),
-    defaultWindowK: MEETING_WINDOW_K_DEFAULT
+    defaultWindowK: MEETING_WINDOW_K_DEFAULT,
+    peers: await listPeers({ selfCwd: councilRoot() })
   };
 };
 
@@ -21,6 +25,14 @@ export const actions: Actions = {
     const windowK =
       Number.parseInt(String(form.get('window_k') ?? ''), 10) || MEETING_WINDOW_K_DEFAULT;
 
+    const remote_attendees: RemoteAttendee[] = [];
+    for (const raw of form.getAll('remote').map(String).filter(Boolean)) {
+      try {
+        const r = JSON.parse(raw) as RemoteAttendee;
+        if (r.council_slug && r.councillor_slug && r.cwd) remote_attendees.push(r);
+      } catch { /* ignore malformed remote entries */ }
+    }
+
     if (!title) return fail(400, { error: 'Title is required.' });
     if (!chair) return fail(400, { error: 'Chair is required.' });
     if (!attendees.includes(chair)) attendees.push(chair);
@@ -32,7 +44,8 @@ export const actions: Actions = {
         topic,
         chair_slug: chair,
         attendees,
-        window_k: windowK
+        window_k: windowK,
+        remote_attendees
       });
       meetingId = m.id;
     } catch (err) {

@@ -36,6 +36,25 @@
       </label>
     {/each}
   </fieldset>
+  {#if data.peers.length > 0}
+    <fieldset class="attendees">
+      <legend>Remote councils</legend>
+      {#each data.peers as p (p.cwd)}
+        <p class="peer-head">{p.name} <span class="role">{p.cwd}</span></p>
+        {#each p.councillors as rc (rc.slug)}
+          <label class="check">
+            <input type="checkbox" name="remote"
+              value={JSON.stringify({ council_slug: p.council_slug, councillor_slug: rc.slug, cwd: p.cwd, label: rc.label })}
+              disabled={rc.busy} />
+            <span>{rc.label}</span>
+            <span class="role">{rc.adapter}{rc.busy ? ' · busy' : ''}</span>
+          </label>
+        {/each}
+      {/each}
+    </fieldset>
+  {:else}
+    <p class="role">No other councils are running.</p>
+  {/if}
   <label>
     <span>Window K <small>(recent turns kept in context)</small></span>
     <input name="window_k" type="number" min="1" value={data.defaultWindowK} />
@@ -71,6 +90,7 @@
     padding: 0.5rem 0.9rem 0.75rem; margin: 0; display: grid; gap: 0.35rem;
   }
   .attendees legend { padding: 0 0.35rem; font-size: 0.9em; color: var(--muted); }
+  .peer-head { margin: 0.4rem 0 0.1rem; font-weight: 600; }
   small { color: var(--muted); font-size: 0.85em; }
   .actions { display: flex; gap: 0.5rem; justify-content: flex-end; }
   .btn {
