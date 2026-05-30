@@ -185,7 +185,7 @@ The speaker token used in `transcript.md` headings, locks, and embeddings:
 - local → `<slug>` (unchanged)
 - remote → `<council_slug>:<councillor_slug>`
 
-No remote locks are pre-acquired at create time (the per-turn model can't reserve). Create-time runs a best-effort reachability + slug-exists probe per remote attendee and warns if a peer is currently down, but does **not** block creation on it.
+No remote locks are pre-acquired at create time (the per-turn model can't reserve). A remote attendee must be **reachable at create time**: the `/meetings/new` picker only offers councillors from currently-running peers, and creation **rejects** any remote attendee whose `cwd` can't be resolved to a live instance (treated as unavailable, same as a busy/missing local councillor blocking creation). A peer that goes down *after* creation is handled mid-meeting by the pause path.
 
 ### Peer participation log
 
@@ -264,6 +264,7 @@ The attendee picker gains a **Remote councils** section populated from `GET /api
 
 ### `/meetings/[id]`
 - Remote speakers render as `<council> › <slug>` chips with a distinct style (e.g. a "remote" badge).
+- A remote attendee whose peer is **not currently running** shows an **"(offline)"** indicator next to its chip — no adapter/label is snapshotted at create time; the stored `label` + offline marker is all that's shown.
 - The pause banner surfaces remote failure reasons verbatim.
 - No new actions — the director controls (Speak/Skip/End/Cancel/Resume) are unchanged.
 
@@ -322,7 +323,7 @@ No new chunk kinds, no reindex-walker changes beyond what single-council meeting
 - Scheduling cross-council meetings; exporting them in council templates.
 - A read UI over `meetings-incoming.jsonl` beyond the optional councillor-page count.
 
-## Open questions (deferred)
+## Resolved during review (2026-05-30)
 
-- Should the host snapshot a remote attendee's adapter/label at create time for display when the peer is offline, or always show "(offline)" with just the slug?
-- When a peer is unreachable at create time, should the director be allowed to create anyway (current: yes, warn-only) or be blocked until it's up?
+- **Offline display:** no adapter/label snapshot — an offline remote attendee just shows its stored `label` + an "(offline)" indicator.
+- **Unreachable at create:** treated as unavailable. The picker only offers reachable peers, and creation rejects any remote attendee that can't be resolved to a live instance.
