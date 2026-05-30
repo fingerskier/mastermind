@@ -67,4 +67,15 @@ describe('/meetings/new', () => {
     const m = all.find((x) => x.title === 'Cross')!;
     expect(m.remote_attendees).toEqual([{ council_slug: 'ops', councillor_slug: 'gurney', cwd: '/ops', label: 'Gurney' }]);
   });
+
+  it('strips unexpected keys from remote attendee blobs and defaults label', async () => {
+    const remote = JSON.stringify({ council_slug: 'ops', councillor_slug: 'gurney', cwd: '/ops', evil: 'x', __proto__: { polluted: true } });
+    const request = new Request('http://x/', {
+      method: 'POST',
+      body: formData({ title: 'Sanitize', topic: 's', chair: 'leto', attendees: ['leto'], remote: [remote], window_k: '2' })
+    });
+    try { await actions.default({ request } as Parameters<typeof actions.default>[0]); } catch { /* redirect */ }
+    const m = (await listMeetings()).find((x) => x.title === 'Sanitize')!;
+    expect(m.remote_attendees).toEqual([{ council_slug: 'ops', councillor_slug: 'gurney', cwd: '/ops', label: '' }]);
+  });
 });

@@ -29,7 +29,14 @@ export const actions: Actions = {
     for (const raw of form.getAll('remote').map(String).filter(Boolean)) {
       try {
         const r = JSON.parse(raw) as RemoteAttendee;
-        if (r.council_slug && r.councillor_slug && r.cwd) remote_attendees.push(r);
+        if (r.council_slug && r.councillor_slug && r.cwd) {
+          remote_attendees.push({
+            council_slug: String(r.council_slug),
+            councillor_slug: String(r.councillor_slug),
+            cwd: String(r.cwd),
+            label: String(r.label ?? '')
+          });
+        }
       } catch { /* ignore malformed remote entries */ }
     }
 
