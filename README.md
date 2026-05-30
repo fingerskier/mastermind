@@ -1,14 +1,69 @@
-# Landsraad
+# 🏛️ Landsraad
 
 A local-first AI council chamber. Configure councillors, give them jobs, watch the council work.
 
-> Status: **v1 — single-council, cwd-rooted.** See [`SPECIFICATION.md`](./SPECIFICATION.md) for the full scope and what's deliberately out of scope.
+Everything runs **on your own computer**. No account. No cloud. No tracking. The council files live in a folder you pick.
+
+---
+
+## 🚀 Getting started (the simple version)
+
+You don't need to be a programmer. Three steps.
+
+### 1. Install Node.js
+
+Landsraad runs on **Node.js** (a free program for running JavaScript apps).
+
+- Go to **[nodejs.org](https://nodejs.org)**
+- Download the **LTS** version (the big green button) for your computer
+- Run the installer, click *Next* through the defaults, and finish
+
+> 💡 You only ever do this once. Need version **20 or newer** — the LTS download is always fine.
+
+### 2. Open a terminal
+
+This is the text window where you type commands.
+
+- **Windows:** press the Start button, type `PowerShell`, press Enter.
+- **Mac:** press `⌘ + Space`, type `Terminal`, press Enter.
+
+### 3. Make a folder and start the council
+
+Copy these lines into the terminal, one at a time, pressing Enter after each:
+
+```bash
+mkdir my-council
+cd my-council
+npx landsraad
+```
+
+What just happened:
+
+- `mkdir my-council` 📁 — makes a new folder called *my-council*. **This folder is your council.** Everything the council remembers lives inside it.
+- `cd my-council` 🚶 — steps into that folder.
+- `npx landsraad` ▶️ — downloads and starts Landsraad. The first run takes a minute; later runs are quick.
+
+When it's ready it prints a web address (like `http://localhost:10191`) and opens your browser. Fill in the setup form and you're off. 🎉
+
+### Coming back later
+
+Want a new council? Make a new folder and run `npx landsraad` inside it. Want to return to an old one? Open a terminal, `cd` into that folder, and run `npx landsraad` again. **One folder = one council.**
+
+To stop the council, click the terminal window and press `Ctrl + C`.
+
+---
 
 ## What's here
 
 - A SvelteKit + TypeScript app you run locally.
 - **One council per directory.** When you run `npx landsraad`, the current working directory **is** the council — `council.json`, `councillors/`, `memory/`, `jobs/`, `.index/` all sit at cwd.
 - No accounts, no cloud, no telemetry. You are the only user. You are also the secretary.
+
+---
+
+# 🛠️ Technical reference
+
+Everything below is for developers, tinkerers, and tooling. The simple instructions above are all most people need.
 
 ## Quickstart
 
