@@ -10,14 +10,15 @@
 
 <header>
   <a href="/" class="brand">Landsraad</a>
-  {#if page.data?.hasCouncil}
-    <nav class="links">
+  <nav class="links">
+    {#if page.data?.hasCouncil}
       <a href="/meetings">Meetings</a>
       <a href="/schedules">Schedules</a>
       <a href="/import">Install template</a>
       <a href="/export">Export…</a>
-    </nav>
-  {/if}
+    {/if}
+    <a href="/help">Help</a>
+  </nav>
 </header>
 
 <main>
