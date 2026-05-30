@@ -104,3 +104,7 @@ export function meetingIdFor(title: string, now: Date = new Date()): string {
   const ts = now.toISOString().replace(/[:.]/g, '-');
   return `${ts}-${slugify(title)}`;
 }
+
+export function meetingsIncomingFile(): string {
+  return join(councilRoot(), 'meetings-incoming.jsonl');
+}
