@@ -3,6 +3,7 @@ import { PEER_DISCOVERY_TIMEOUT_MS } from './config';
 
 export interface PeerCouncillor {
   slug: string;
+  /** Mirrors the `/api/council` wire field — the remote councillor's display name, distinct from local `Councillor.name`. */
   label: string;
   adapter: string;
   busy: boolean;
@@ -34,7 +35,7 @@ async function fetchCouncil(
     });
     if (!res.ok) return null;
     const body = (await res.json()) as { slug: string; name: string; councillors: PeerCouncillor[] };
-    if (!body || typeof body.slug !== 'string') return null;
+    if (!body || typeof body.slug !== 'string' || !Array.isArray(body.councillors)) return null;
     return body;
   } catch {
     return null;
@@ -54,7 +55,7 @@ export async function listPeers(opts: ListPeersOpts): Promise<Peer[]> {
         name: council.name,
         cwd: i.cwd,
         port: i.port as number,
-        councillors: council.councillors ?? []
+        councillors: council.councillors
       } satisfies Peer;
     })
   );

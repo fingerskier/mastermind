@@ -53,4 +53,7 @@ describe('resolvePeerPort', () => {
   it('returns null when the cwd is no longer running', async () => {
     expect(await resolvePeerPort('/gone', [])).toBeNull();
   });
+  it('returns null when the matching instance has a null port', async () => {
+    expect(await resolvePeerPort('/p', [{ pid: 3, port: null, cwd: '/p', startedAt: 'x' }])).toBeNull();
+  });
 });
