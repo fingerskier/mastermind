@@ -27,6 +27,10 @@
   }
   const turns = $derived(parseTurns(data.transcript ?? ''));
 
+  const isRemote = (token: string) => token.includes(':');
+  const prettySpeaker = (token: string) => (isRemote(token) ? token.replace(':', ' › ') : token);
+  const offline = $derived(new Set<string>(data.offlineRemotes ?? []));
+
   type NextUp = { label: string; sub: string } | null;
   function computeNext(meeting: typeof m): NextUp {
     switch (meeting.status) {
@@ -34,12 +38,12 @@
         return { label: 'You (director)', sub: 'awaiting your turn' };
       case 'running':
         if (meeting.remaining_this_round.length > 0) {
-          return { label: meeting.remaining_this_round[0], sub: 'councillor speaking next' };
+          return { label: prettySpeaker(meeting.remaining_this_round[0]), sub: 'councillor speaking next' };
         }
         return { label: 'You (director)', sub: 'next round begins after director speaks' };
       case 'paused':
         if (meeting.remaining_this_round.length > 0) {
-          return { label: meeting.remaining_this_round[0], sub: 'paused — will retry on resume' };
+          return { label: prettySpeaker(meeting.remaining_this_round[0]), sub: 'paused — will retry on resume' };
         }
         return { label: '—', sub: 'paused' };
       case 'synthesizing':
@@ -64,7 +68,7 @@
 <p>
   <span>status: {m.status}</span> ·
   <span>chair: {m.chair_slug}</span> ·
-  <span>attendees: {m.attendees.join(', ')}</span> ·
+  <span>attendees: {m.attendees.join(', ')}{#if m.remote_attendees?.length}, {m.remote_attendees.map((r) => `${r.council_slug} › ${r.councillor_slug}${offline.has(`${r.council_slug}:${r.councillor_slug}`) ? ' (offline)' : ''}`).join(', ')}{/if}</span> ·
   <span>round: {m.current_round}</span> ·
   <span>turns: {m.total_turns}</span>
 </p>
@@ -128,7 +132,7 @@
       <li class="turn">
         <header class="turn-head">
           <span class="turn-index">Turn {t.index}</span>
-          <span class="turn-speaker">{t.speaker}</span>
+          <span class="turn-speaker" class:remote={isRemote(t.speaker)}>{prettySpeaker(t.speaker)}</span>
           <span class="turn-at">{t.at}</span>
         </header>
         <div class="md-block turn-body">{@html renderMd(t.body)}</div>
@@ -194,6 +198,12 @@
     margin-bottom: 0.4rem;
   }
   .turn-speaker { color: var(--fg); font-weight: 600; }
+  .turn-speaker.remote {
+    background: rgba(106, 166, 255, 0.12);
+    border: 1px solid var(--accent, #6aa6ff);
+    border-radius: 4px;
+    padding: 0 0.4em;
+  }
   .turn-at { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 0.85em; }
 
   .md-block {

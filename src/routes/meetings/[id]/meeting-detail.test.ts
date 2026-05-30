@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach } from 'vitest';
+import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { mkdtempSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
@@ -7,6 +7,11 @@ import { createCouncil } from '$lib/server/councils';
 import { createCouncillor } from '$lib/server/councillors';
 import { startMeeting } from '$lib/server/meeting-runner';
 import { readMeeting } from '$lib/server/meetings';
+
+vi.mock('$lib/server/peers', async (orig) => {
+  const actual = (await orig()) as object;
+  return { ...actual, resolvePeerPort: vi.fn(async () => null) };
+});
 
 describe('/meetings/[id] actions', () => {
   beforeEach(async () => {
@@ -50,5 +55,16 @@ describe('/meetings/[id] actions', () => {
     const data = await load({ params: { id: m.id } } as Parameters<typeof load>[0]) as Awaited<ReturnType<typeof load>>;
     expect((data as { meeting: { id: string }; topic: string }).meeting.id).toBe(m.id);
     expect((data as { meeting: { id: string }; topic: string }).topic).toBe('hello topic');
+  });
+
+  it('reports offline remote attendees in load data', async () => {
+    const { createMeeting } = await import('$lib/server/meetings');
+    const m = await createMeeting({
+      title: 'S', topic: 't', chair_slug: 'leto', attendees: ['leto'], window_k: 2,
+      remote_attendees: [{ council_slug: 'ops', councillor_slug: 'gurney', cwd: '/ops', label: 'Gurney' }]
+    });
+    const { load: loadFn } = await import('./+page.server');
+    const data = await loadFn({ params: { id: m.id } } as Parameters<typeof load>[0]);
+    expect((data as { offlineRemotes: string[] }).offlineRemotes).toContain('ops:gurney');
   });
 });

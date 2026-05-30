@@ -6,7 +6,8 @@ import {
   readTopic,
   readTranscript,
   readSummary,
-  readSynthesis
+  readSynthesis,
+  remoteToken
 } from '$lib/server/meetings';
 import {
   directorSpeak,
@@ -15,17 +16,25 @@ import {
   cancelMeeting,
   resumeMeeting
 } from '$lib/server/meeting-runner';
+import { resolvePeerPort } from '$lib/server/peers';
 
 export const load: PageServerLoad = async ({ params }) => {
   const meeting = await readMeeting(params.id).catch(() => null);
   if (!meeting) throw error(404, 'Meeting not found');
+
+  const offlineRemotes: string[] = [];
+  for (const r of meeting.remote_attendees ?? []) {
+    if ((await resolvePeerPort(r.cwd)) === null) offlineRemotes.push(remoteToken(r));
+  }
+
   return {
     meeting,
     topic: await readTopic(params.id),
     transcript: await readTranscript(params.id),
     summary: await readSummary(params.id),
     synthesis: meeting.status === 'ended' ? await readSynthesis(params.id) : '',
-    events: await readMeetingEvents(params.id)
+    events: await readMeetingEvents(params.id),
+    offlineRemotes
   };
 };
 
