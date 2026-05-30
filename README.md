@@ -21,33 +21,49 @@ npx landsraad
 
 Open the URL it prints. The setup form creates `council.json` in the current directory.
 
-### From the repo (development)
+## Development
+
+Clone the repo and run the dev server straight from the source — no build step, no `npx`:
 
 ```bash
+git clone <repo> && cd landsraad
 npm install
-npm run dev   # runs against repo cwd; council files are gitignored
+npm run dev
 ```
 
-To target a specific directory:
+Open the URL it prints (Vite picks a port, usually `http://localhost:5173`).
+
+**`npm run dev` turns the cloned repo into a throwaway test council.** Because a council root is just `process.cwd()`, the dev server treats the repo checkout itself as the council. The first time you create councillors, jobs, or run a meeting, the app scaffolds the council files **right in your clone**:
+
+```
+council.json      councillors/   memory/
+jobs/             proposals/     meetings/      .index/
+```
+
+All of these are **gitignored** (see [`.gitignore`](./.gitignore)), so your local experimentation never shows up in `git status` and can't be committed by accident. Hack freely — it's a scratch council.
+
+### Target a different council directory
 
 ```bash
 LANDSRAAD_COUNCIL_ROOT=/path/to/council npm run dev
 ```
 
-### Seed a dogfood council
+### Seed a richer dogfood council
 
 ```bash
-npm run dogfood:init        # creates ./dogfood
-cd dogfood && npx landsraad # or LANDSRAAD_COUNCIL_ROOT=./dogfood npm run dev
+npm run dogfood:init        # creates ./dogfood from templates/dogfood.template.json
+cd dogfood && npx landsraad # or: LANDSRAAD_COUNCIL_ROOT=./dogfood npm run dev
 ```
 
-### Wipe the dev council
+### Wipe the test council
+
+Scratch council got messy? Reset it:
 
 ```bash
-npm run reset               # same as `landsraad reset`, but uses repo source — no build/install needed
+npm run reset               # same as `landsraad reset`, uses repo source — no build/install needed
 ```
 
-Honors `LANDSRAAD_COUNCIL_ROOT` (so `LANDSRAAD_COUNCIL_ROOT=./dogfood npm run reset` wipes the dogfood council).
+Honors `LANDSRAAD_COUNCIL_ROOT` (so `LANDSRAAD_COUNCIL_ROOT=./dogfood npm run reset` wipes the dogfood council instead of the repo-root one).
 
 ## Configuration
 
