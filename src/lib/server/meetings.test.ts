@@ -14,7 +14,8 @@ import {
   writeSummary,
   readSummary,
   writeSynthesis,
-  readTopic
+  readTopic,
+  remoteToken
 } from './meetings';
 import { createCouncil } from './councils';
 import { createCouncillor } from './councillors';
@@ -88,5 +89,38 @@ describe('meetings', () => {
     const all = await listMeetings();
     expect(all[0].title).toBe('B');
     expect(all[1].title).toBe('A');
+  });
+});
+
+describe('createMeeting with remote attendees', () => {
+  beforeEach(async () => {
+    tempCouncil();
+    await createCouncil({ name: 'Test', description: '' });
+    await createCouncillor({ name: 'Leto', role: 'duke', routing_hint: '', adapter: 'mock:local', persona: '' });
+    await createCouncillor({ name: 'Mocky', role: 'sidekick', routing_hint: '', adapter: 'mock:local', persona: '' });
+  });
+
+  it('stores remote_attendees and seeds remaining_this_round with tokens', async () => {
+    const m = await createMeeting({
+      title: 'X', topic: 't', chair_slug: 'leto', attendees: ['leto'], window_k: 2,
+      remote_attendees: [{ council_slug: 'ops', councillor_slug: 'gurney', cwd: '/ops', label: 'Gurney' }]
+    });
+    expect(m.attendees).toEqual(['leto']);
+    expect(m.remote_attendees).toEqual([
+      { council_slug: 'ops', councillor_slug: 'gurney', cwd: '/ops', label: 'Gurney' }
+    ]);
+    expect(m.remaining_this_round.sort()).toEqual(['leto', 'ops:gurney']);
+  });
+
+  it('back-compat: a meeting.json with no remote_attendees loads with []', async () => {
+    const m = await createMeeting({ title: 'Y', topic: 't', chair_slug: 'leto', attendees: ['leto'], window_k: 2 });
+    const reloaded = await readMeeting(m.id);
+    expect(reloaded.remote_attendees).toEqual([]);
+  });
+});
+
+describe('remoteToken', () => {
+  it('joins council and councillor with a colon', () => {
+    expect(remoteToken({ council_slug: 'ops', councillor_slug: 'gurney', cwd: '/x', label: 'G' })).toBe('ops:gurney');
   });
 });

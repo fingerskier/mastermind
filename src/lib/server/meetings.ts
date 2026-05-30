@@ -1,7 +1,7 @@
 import { appendFile, mkdir, readFile, readdir, writeFile } from 'node:fs/promises';
 import { existsSync } from 'node:fs';
 import { join } from 'node:path';
-import type { Meeting, MeetingEvent, MeetingStatus } from '$lib/types';
+import type { Meeting, MeetingEvent, MeetingStatus, RemoteAttendee } from '$lib/types';
 import { meetingDir, meetingIdFor, meetingsDir } from './paths';
 import { hasCouncil } from './councils';
 import { readCouncillor } from './councillors';
@@ -19,7 +19,12 @@ export interface NewMeetingInput {
   topic: string;
   chair_slug: string;
   attendees: string[];
+  remote_attendees?: RemoteAttendee[];
   window_k: number;
+}
+
+export function remoteToken(r: RemoteAttendee): string {
+  return `${r.council_slug}:${r.councillor_slug}`;
 }
 
 function shuffle<T>(input: T[], rng: () => number = Math.random): T[] {
@@ -52,17 +57,21 @@ export async function createMeeting(
   const dir = meetingDir(id);
   if (existsSync(dir)) throw new Error(`Meeting "${id}" already exists.`);
 
+  const remotes = input.remote_attendees ?? [];
+  const allTokens = [...input.attendees, ...remotes.map(remoteToken)];
+
   const meeting: Meeting = {
     id,
     title: input.title.trim(),
     chair_slug: input.chair_slug,
     attendees: input.attendees.slice(),
+    remote_attendees: remotes,
     status: 'awaiting_director',
     window_k: input.window_k,
     started_at: now.toISOString(),
     ended_at: null,
     current_round: 1,
-    remaining_this_round: shuffle(input.attendees, rng),
+    remaining_this_round: shuffle(allTokens, rng),
     director_spoken_this_round: false,
     last_summarized_turn: 0,
     total_turns: 0
@@ -89,7 +98,9 @@ export async function createMeeting(
 
 export async function readMeeting(id: string): Promise<Meeting> {
   const raw = await readFile(join(meetingDir(id), MEETING_FILE), 'utf8');
-  return JSON.parse(raw) as Meeting;
+  const m = JSON.parse(raw) as Meeting;
+  if (!m.remote_attendees) m.remote_attendees = [];
+  return m;
 }
 
 export async function writeMeeting(m: Meeting): Promise<void> {
@@ -146,7 +157,7 @@ export async function appendTranscriptBlock(id: string, block: TranscriptBlock):
     source_path: file,
     source_mtime: block.at,
     title: `${meta?.title ?? id} · turn ${block.turnIndex} · ${block.speaker}`,
-    councillor_slug: block.speaker === 'director' ? null : block.speaker
+    councillor_slug: block.speaker === 'director' || block.speaker.includes(':') ? null : block.speaker
   });
 }
 

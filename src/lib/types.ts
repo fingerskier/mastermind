@@ -131,11 +131,19 @@ export type MeetingStatus =
   | 'cancelled'
   | 'failed';
 
+export interface RemoteAttendee {
+  council_slug: string;
+  councillor_slug: string;
+  cwd: string;
+  label: string;
+}
+
 export interface Meeting {
   id: string;
   title: string;
   chair_slug: string;
   attendees: string[];
+  remote_attendees?: RemoteAttendee[];
   status: MeetingStatus;
   window_k: number;
   started_at: string;
