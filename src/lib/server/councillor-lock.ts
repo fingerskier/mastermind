@@ -1,6 +1,7 @@
 export type LockHolder =
   | { kind: 'job'; id: string }
-  | { kind: 'meeting'; id: string };
+  | { kind: 'meeting'; id: string }
+  | { kind: 'remote-meeting'; id: string; host: string };
 
 const slots = new Map<string, LockHolder>();
 

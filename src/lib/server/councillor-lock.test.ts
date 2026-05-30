@@ -36,3 +36,16 @@ describe('councillor-lock', () => {
     expect(listHeldBy({ kind: 'meeting', id: 'M1' }).sort()).toEqual(['a', 'b']);
   });
 });
+
+describe('councillor-lock remote-meeting holder', () => {
+  beforeEach(() => _resetForTests());
+
+  it('acquires and releases a remote-meeting hold', () => {
+    const holder = { kind: 'remote-meeting' as const, id: 'm1', host: 'eng-council' };
+    expect(tryAcquire('leto', holder)).toBe(true);
+    expect(tryAcquire('leto', { kind: 'meeting', id: 'm2' })).toBe(false); // busy
+    expect(current('leto')).toEqual(holder);
+    release('leto', { kind: 'remote-meeting', id: 'm1', host: 'eng-council' });
+    expect(current('leto')).toBeNull();
+  });
+});
