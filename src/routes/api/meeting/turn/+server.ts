@@ -25,7 +25,13 @@ export const POST: RequestHandler = async ({ request, getClientAddress }) => {
   }
 
   const body = (await request.json().catch(() => null)) as TurnRequest | null;
-  if (!body || !body.councillor_slug || !body.context) {
+  if (!body || !body.councillor_slug || !body.meeting_id || !body.host_council || !body.context) {
+    return json({ error: 'bad request' }, { status: 400 });
+  }
+  // Reject path-traversal / oversized identifiers before they touch the filesystem or audit log.
+  const SLUG_RE = /^[a-z0-9-]{1,64}$/;       // councillor slug = slugify() output
+  const ID_RE = /^[a-z0-9:._-]{1,128}$/;     // meeting id / host council slug
+  if (!SLUG_RE.test(body.councillor_slug) || !ID_RE.test(body.meeting_id) || !ID_RE.test(body.host_council)) {
     return json({ error: 'bad request' }, { status: 400 });
   }
 
@@ -42,6 +48,7 @@ export const POST: RequestHandler = async ({ request, getClientAddress }) => {
   try {
     const adapter = resolveAdapter(councillor.adapter);
     if (!adapter) {
+      console.error('meeting/turn: unknown adapter', councillor.adapter);
       return json({ ok: false, exit_code: -1, detail: `unknown adapter "${councillor.adapter}"` }, { status: 200 });
     }
 
@@ -72,7 +79,7 @@ export const POST: RequestHandler = async ({ request, getClientAddress }) => {
       councillor_slug: body.councillor_slug,
       duration_ms: result.durationMs,
       exit_code: result.exit_code
-    });
+    }).catch((e) => console.error('meeting/turn: participation log write failed', e));
 
     if (result.exit_code !== 0) {
       return json(

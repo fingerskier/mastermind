@@ -60,4 +60,23 @@ describe('POST /api/meeting/turn', () => {
     const res = await POST(event({ meeting_id: 'm1', host_council: 'eng', councillor_slug: 'leto', context: ctx }));
     expect(res.status).toBe(409);
   });
+
+  it('rejects a path-traversal councillor_slug with 400 (does not touch the filesystem)', async () => {
+    const res = await POST(event({ meeting_id: 'm1', host_council: 'eng', councillor_slug: '../../etc/passwd', context: ctx }));
+    expect(res.status).toBe(400);
+  });
+
+  it('returns 400 when meeting_id is missing', async () => {
+    const res = await POST(event({ host_council: 'eng', councillor_slug: 'leto', context: ctx }));
+    expect(res.status).toBe(400);
+  });
+
+  it('returns 400 on an unparseable body', async () => {
+    const ev = {
+      request: new Request('http://127.0.0.1/api/meeting/turn', { method: 'POST', body: 'not json' }),
+      getClientAddress: () => '127.0.0.1'
+    } as unknown as Parameters<typeof POST>[0];
+    const res = await POST(ev);
+    expect(res.status).toBe(400);
+  });
 });
