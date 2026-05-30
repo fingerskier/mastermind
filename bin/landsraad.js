@@ -11,9 +11,19 @@ import { spawn } from 'node:child_process';
 import { platform } from 'node:os';
 import { findFreePort } from './find-port.js';
 import { writeInstance, removeInstance } from './registry.js';
+import { formatStartupDiag } from './diag.js';
 
 const here = dirname(fileURLToPath(import.meta.url));
 const repoRoot = resolve(here, '..');
+
+function readPkgVersion() {
+  try {
+    const data = JSON.parse(readFileSync(resolve(repoRoot, 'package.json'), 'utf8'));
+    return typeof data?.version === 'string' ? data.version : '0.0.0';
+  } catch {
+    return '0.0.0';
+  }
+}
 
 const DEFAULT_PORT = 10191;
 const PORT_SCAN_RANGE = 100;
@@ -67,7 +77,7 @@ function openInBrowser(url) {
   }
 }
 
-async function runBundled(relPath, { autoOpen = false } = {}) {
+async function runBundled(relPath, { autoOpen = false, diag = null } = {}) {
   const entry = resolve(repoRoot, relPath);
   if (!existsSync(entry)) {
     console.error(
@@ -102,6 +112,20 @@ async function runBundled(relPath, { autoOpen = false } = {}) {
     env,
     cwd: process.cwd()
   });
+
+  if (diag) {
+    const portNum = Number.parseInt(env.PORT ?? '', 10);
+    const port = Number.isInteger(portNum) ? portNum : null;
+    const lines = formatStartupDiag({
+      ...diag,
+      port,
+      url: port != null ? `http://localhost:${port}` : undefined,
+      pid: child.pid,
+      node: process.version,
+      version: readPkgVersion()
+    });
+    console.error(lines.join('\n'));
+  }
 
   let registered = false;
   const cleanup = async () => {
@@ -173,9 +197,20 @@ if (sub === 'init') {
 } else if (sub === 'reset') {
   task = runBundled('build/cli/reset.mjs');
 } else {
-  const councilName = readCouncilName(process.cwd()) ?? basename(process.cwd());
+  const cwd = process.cwd();
+  const explicitName = readCouncilName(cwd);
+  const councilName = explicitName ?? basename(cwd);
+  const configPath = resolve(cwd, 'council.json');
   setTerminalTitle(`${councilName} — Landsraad`);
-  task = runBundled('build/index.js', { autoOpen: true });
+  task = runBundled('build/index.js', {
+    autoOpen: true,
+    diag: {
+      councilName,
+      cwd,
+      configPath,
+      configExists: existsSync(configPath)
+    }
+  });
 }
 
 task.catch((err) => {
