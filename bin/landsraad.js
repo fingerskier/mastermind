@@ -90,6 +90,10 @@ async function runBundled(relPath, { autoOpen = false, diag = null } = {}) {
   }
 
   const env = { ...process.env, LANDSRAAD_PKG_ROOT: repoRoot };
+  // Bind loopback by default so the no-auth summon endpoint (/api/meeting/turn) is never
+  // network-reachable. A user may still override with HOST=0.0.0.0 to view the UI remotely;
+  // the loopback caller gate on /api/meeting/turn still blocks cross-machine summons.
+  if (!env.HOST) env.HOST = '127.0.0.1';
   if (autoOpen) {
     const requested = Number.parseInt(env.PORT ?? '', 10);
     const start = Number.isInteger(requested) && requested > 0 ? requested : DEFAULT_PORT;
