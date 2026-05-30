@@ -75,6 +75,13 @@ describe('meetings', () => {
     expect(events.find((e) => e.type === 'turn_finished')?.speaker).toBe('leto');
   });
 
+  it('appendTranscriptBlock with remote-token speaker writes turn to transcript (councillor_slug=null path)', async () => {
+    const m = await createMeeting({ title: 'R', topic: 't', chair_slug: 'leto', attendees: ['leto'], window_k: 2 });
+    await appendTranscriptBlock(m.id, { turnIndex: 1, speaker: 'ops:gurney', at: '2026-05-28T00:00:00.000Z', body: 'hello from remote' });
+    const t = await readTranscript(m.id);
+    expect(t).toContain('## Turn 1 — ops:gurney');
+  });
+
   it('writeSummary + writeSynthesis persist their files', async () => {
     const m = await createMeeting({ title: 'S', topic: 't', chair_slug: 'leto', attendees: ['leto'], window_k: 2 });
     await writeSummary(m.id, 'rolling summary');

@@ -65,7 +65,7 @@ export async function createMeeting(
     title: input.title.trim(),
     chair_slug: input.chair_slug,
     attendees: input.attendees.slice(),
-    remote_attendees: remotes,
+    remote_attendees: remotes.slice(),
     status: 'awaiting_director',
     window_k: input.window_k,
     started_at: now.toISOString(),
