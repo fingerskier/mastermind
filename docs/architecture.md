@@ -34,7 +34,7 @@ A v0 with no agent execution is mostly forms + a filesystem CRUD layer. SvelteKi
 - `src/lib/server/context.ts` — `assembleContextFor(councillor_slug, brief)` — top-K semantic retrieval (shared + private) with char budget + fallback.
 - `src/lib/server/config.ts` — tuning constants (`MEMORY_TOPK_SHARED`, `MEMORY_TOPK_PRIVATE`, `MEMORY_CHAR_BUDGET`). No UI in v1.
 - `src/lib/server/templates.ts` — council-template schema, loader (URL or path), `planApply` / `applyTemplate` (preview-then-confirm), `exportSelection`, named errors.
-- `src/lib/server/adapters/` — adapter implementations (`mock:local`, `cli:claude`, `cli:codex`).
+- `src/lib/server/adapters/` — adapter implementations (`mock:local`, `cli:claude`, `cli:codex`, `cli:gemini`, `cli:grok`).
 - `src/lib/server/indexer.ts` + `embeddings.ts` — semantic index over markdown surfaces.
 - `src/lib/server/open_editor.ts` — "edit persona in default editor" helper.
 - `src/lib/types.ts` — types shared between server and client.

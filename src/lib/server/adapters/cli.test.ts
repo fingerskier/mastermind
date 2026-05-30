@@ -15,4 +15,19 @@ describe('cli adapter configs', () => {
     expect(cfg).not.toBeNull();
     expect(cfg!.args('prompt')).toEqual(['-p']);
   });
+
+  it('gemini CLI runs headless via piped stdin', () => {
+    const cfg = getCliConfig('cli:gemini');
+    expect(cfg).not.toBeNull();
+    expect(cfg!.command).toBe('gemini');
+    expect(cfg!.stdinMode).toBe('pipe');
+  });
+
+  it('grok CLI passes the prompt as the --prompt argument value', () => {
+    const cfg = getCliConfig('cli:grok');
+    expect(cfg).not.toBeNull();
+    expect(cfg!.command).toBe('grok');
+    expect(cfg!.stdinMode).toBe('arg');
+    expect(cfg!.args('hello world')).toEqual(['--prompt', 'hello world']);
+  });
 });

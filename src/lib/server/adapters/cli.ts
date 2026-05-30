@@ -20,6 +20,18 @@ const REGISTRY: Record<string, CliAdapterConfig> = {
     command: 'codex',
     args: () => ['exec', '--skip-git-repo-check', '-'],
     stdinMode: 'pipe'
+  },
+  'cli:gemini': {
+    id: 'cli:gemini',
+    command: 'gemini',
+    args: () => [],
+    stdinMode: 'pipe'
+  },
+  'cli:grok': {
+    id: 'cli:grok',
+    command: 'grok',
+    args: (prompt) => ['--prompt', prompt],
+    stdinMode: 'arg'
   }
 };
 
