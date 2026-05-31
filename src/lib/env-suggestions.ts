@@ -30,7 +30,7 @@ export const ENV_KEY_SUGGESTIONS: EnvKeySuggestion[] = [
   {
     key: 'LANDSRAAD_MEETING_MODEL',
     description:
-      'Model for all meeting turns — a literal id ("haiku") or a tier ("lite"/"medium"/"heavy") mapped per adapter. A councillor ?model= pin still wins.'
+      'Model for all meeting turns. Use a tier — "lite"/"medium"/"heavy" — mapped per adapter, or a literal model id. A councillor ?model= pin still wins.'
   },
   { key: 'LANDSRAAD_MEETING_WINDOW_K', description: 'Recent turns shown per meeting turn (default 4)' },
   {
