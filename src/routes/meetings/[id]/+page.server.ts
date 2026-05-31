@@ -17,14 +17,16 @@ import {
   resumeMeeting
 } from '$lib/server/meeting-runner';
 import { resolvePeerPort } from '$lib/server/peers';
+import { readInstances } from '$lib/server/instances';
 
 export const load: PageServerLoad = async ({ params }) => {
   const meeting = await readMeeting(params.id).catch(() => null);
   if (!meeting) throw error(404, 'Meeting not found');
 
+  const instances = await readInstances();
   const offlineRemotes: string[] = [];
   for (const r of meeting.remote_attendees ?? []) {
-    if ((await resolvePeerPort(r.cwd)) === null) offlineRemotes.push(remoteToken(r));
+    if ((await resolvePeerPort(r.cwd, instances)) === null) offlineRemotes.push(remoteToken(r));
   }
 
   return {
