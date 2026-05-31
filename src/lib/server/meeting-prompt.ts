@@ -1,3 +1,15 @@
+import { MEETING_TURN_NUDGE } from './config';
+
+/**
+ * Build the "Speak now" instruction that closes a turn prompt. When a brevity
+ * nudge is set (default `MEETING_TURN_NUDGE`), it is appended so councillors
+ * keep meeting responses short. Used by both local and remote turn paths.
+ */
+export function buildSpeakerInstruction(slug: string, nudge: string = MEETING_TURN_NUDGE): string {
+  const base = `You are ${slug}. Speak now.`;
+  return nudge.trim() ? `${base} ${nudge.trim()}` : base;
+}
+
 export interface ComposeTurnPromptParts {
   persona: string;
   memCtx: string;

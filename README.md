@@ -127,6 +127,7 @@ Honors `LANDSRAAD_COUNCIL_ROOT` (so `LANDSRAAD_COUNCIL_ROOT=./dogfood npm run re
 | `LANDSRAAD_COUNCIL_ROOT` | `process.cwd()` | The directory Landsraad treats as the council root. |
 | `PORT` | `10191` | Starting port the production server (`npx landsraad`) listens on. If the port is already in use it scans up to 100 ports forward and binds the next free one — running multiple councils in parallel just works. |
 | `LANDSRAAD_INSTANCES_FILE` | `~/.landsraad/instances.json` | Cross-instance registry. Each running `npx landsraad` writes its `{ pid, port, cwd, startedAt }` here on listen and removes it on shutdown; dead entries are pruned lazily on read. |
+| `LANDSRAAD_MEETING_TURN_NUDGE` | _(empty)_ | Text appended to every meeting turn's speaker instruction. Set e.g. `"Be terse — 1-3 sentences."` to ask councillors for shorter responses in meetings. Read on the chair council, so one knob governs the whole meeting (local and remote attendees). Empty = no change. |
 
 When you run `npx landsraad`, the server opens your default browser to the council URL once it's listening. Set `PORT` to override the starting port.
 

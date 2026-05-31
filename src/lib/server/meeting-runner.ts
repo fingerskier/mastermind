@@ -25,6 +25,7 @@ import { runAdapter } from './adapters/runAdapter';
 import { councilRoot } from './paths';
 import { assembleContextFor } from './context';
 import { MEETING_TURN_TIMEOUT_MS, MEETING_SUMMARY_TIMEOUT_MS } from './config';
+import { buildSpeakerInstruction } from './meeting-prompt';
 import { applyReflectionBlocks } from './reflection';
 import { writeSynthesis } from './meetings';
 
@@ -116,7 +117,7 @@ async function buildTurnPrompt(meetingId: string, speakerSlug: string): Promise<
       '',
       recent.trim() || '(no turns yet)',
       '',
-      `You are ${speakerSlug}. Speak now.`
+      buildSpeakerInstruction(speakerSlug)
     ].join('\n')
   );
   return sections.join('\n\n') + '\n';
@@ -254,7 +255,7 @@ export async function advance(id: string): Promise<void> {
           topic,
           summary,
           recent_turns,
-          speaker_instruction: `You are ${remote.councillor_slug}. Speak now.`
+          speaker_instruction: buildSpeakerInstruction(remote.councillor_slug)
         },
         signal: controller.signal
       });

@@ -1,5 +1,21 @@
 import { describe, it, expect } from 'vitest';
-import { composeRemoteTurnPrompt } from './meeting-prompt';
+import { composeRemoteTurnPrompt, buildSpeakerInstruction } from './meeting-prompt';
+
+describe('buildSpeakerInstruction', () => {
+  it('returns the bare instruction when no nudge is set', () => {
+    expect(buildSpeakerInstruction('leto', '')).toBe('You are leto. Speak now.');
+  });
+
+  it('appends the nudge when set', () => {
+    expect(buildSpeakerInstruction('leto', 'Be terse — 1-3 sentences.')).toBe(
+      'You are leto. Speak now. Be terse — 1-3 sentences.'
+    );
+  });
+
+  it('ignores a whitespace-only nudge', () => {
+    expect(buildSpeakerInstruction('leto', '   ')).toBe('You are leto. Speak now.');
+  });
+});
 
 describe('composeRemoteTurnPrompt', () => {
   it('orders persona, memory, then the meeting block', () => {
