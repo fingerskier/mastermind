@@ -36,6 +36,12 @@ A v0 with no agent execution is mostly forms + a filesystem CRUD layer. SvelteKi
 - `src/lib/server/templates.ts` — council-template schema, loader (URL or path), `planApply` / `applyTemplate` (preview-then-confirm), `exportSelection`, named errors.
 - `src/lib/server/adapters/` — adapter implementations (`mock:local`, `cli:claude`, `cli:codex`, `cli:gemini`, `cli:grok`).
 - `src/lib/server/indexer.ts` + `embeddings.ts` — semantic index over markdown surfaces.
+- `src/lib/server/peers.ts` — discover peer councils (instances ⨯ `/api/council`); resolve a peer's live port by durable `cwd`.
+- `src/lib/server/meeting-remote.ts` — `summonRemoteTurn()`: POST `/api/meeting/turn`, map busy/unreachable/turn_failed.
+- `src/lib/server/meeting-prompt.ts` — pure turn-prompt composer shared by the peer summon handler.
+- `src/lib/server/participation.ts` — `meetings-incoming.jsonl` peer audit log.
+- `src/lib/server/net.ts` — `isLoopbackAddress()` for the summon caller gate.
+- `src/routes/api/council`, `src/routes/api/peers`, `src/routes/api/meeting/turn` — cross-council endpoints.
 - `src/lib/server/open_editor.ts` — "edit persona in default editor" helper.
 - `src/lib/types.ts` — types shared between server and client.
 - `src/routes/**` — UI pages + form actions. Pages should not import from `node:fs` or `node:path` directly; they go through `$lib/server`.

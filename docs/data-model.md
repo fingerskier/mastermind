@@ -157,6 +157,53 @@ A `<<MEMORY scope="shared">>` block in the same reflection output routes the ent
 
 Schedule IDs are `<UTC-timestamp>-<title-slug>` (mirrors job IDs). Side-channel: `<schedule-id>.events.jsonl` records `created | enabled | disabled | edited | fired | skipped_overlap | missed_fires | fire_error` lines as the schedule runs.
 
+## `meetings/<meeting-id>/meeting.json` — attendee representation
+
+Local and remote councillors are stored separately:
+
+- `attendees: string[]` — slugs of councillors **on this council** (local speakers).
+- `remote_attendees: RemoteAttendee[]` — councillors from other councils. Back-compat: a `meeting.json` with no `remote_attendees` field loads as `[]`.
+- `remaining_this_round: string[]` — speaker tokens for the current round. A local token is a bare councillor slug (e.g. `"cfo"`). A remote token is `"<council_slug>:<councillor_slug>"` (contains `:`), e.g. `"alpha:analyst"`.
+
+`RemoteAttendee` shape:
+
+```json
+{
+  "council_slug": "alpha",
+  "councillor_slug": "analyst",
+  "cwd": "/home/user/councils/alpha",
+  "label": "Analyst (alpha)"
+}
+```
+
+- `council_slug` — slug of the peer council.
+- `councillor_slug` — slug of the councillor on that peer council.
+- `cwd` — filesystem path to the peer council root (used to resolve the live port via the instance registry).
+- `label` — display name shown in the transcript and meeting UI.
+
+Failure pause reasons recorded in `events.jsonl` for remote-turn failures:
+
+| Reason token | Meaning |
+|---|---|
+| `remote_unreachable:<council>` | Peer instance not found or HTTP call failed |
+| `remote_busy:<council>:<councillor>` | Peer returned 409 (councillor busy) |
+| `remote_turn_failed:<council>:<councillor>` | Peer returned a non-ok turn result |
+
+## `meetings-incoming.jsonl`
+
+Peer audit log written at the **council root** (not inside a meeting directory). One line per summoned turn served:
+
+```json
+{ "ts": "2026-05-30T12:00:00.000Z", "host_council": "beta", "meeting_id": "2026-...", "councillor_slug": "cfo", "duration_ms": 1234, "exit_code": 0 }
+```
+
+- `ts` — ISO-8601 UTC timestamp of the turn completion.
+- `host_council` — slug of the council that summoned this turn.
+- `meeting_id` — meeting ID on the host council.
+- `councillor_slug` — which local councillor was summoned.
+- `duration_ms` — wall-clock time for the adapter call.
+- `exit_code` — adapter exit code (0 = success).
+
 ## Invariants
 
 - One council per process. The Landsraad app runs against `cwd` (or `LANDSRAAD_COUNCIL_ROOT`).

@@ -27,6 +27,26 @@ describe('buildOpenApiSpec', () => {
     expect(op!.responses['200']).toBeDefined();
   });
 
+  it('documents GET /api/council', () => {
+    const op = spec.paths['/api/council']?.get;
+    expect(op).toBeDefined();
+    expect(op!.responses['200']).toBeDefined();
+  });
+
+  it('documents GET /api/peers', () => {
+    const op = spec.paths['/api/peers']?.get;
+    expect(op).toBeDefined();
+    expect(op!.responses['200']).toBeDefined();
+  });
+
+  it('documents POST /api/meeting/turn with loopback-only 403', () => {
+    const op = spec.paths['/api/meeting/turn']?.post;
+    expect(op).toBeDefined();
+    expect(op!.responses['200']).toBeDefined();
+    expect(op!.responses['403']).toBeDefined();
+    expect(op!.responses['409']).toBeDefined();
+  });
+
   it('defines Instance + InstancesResponse component schemas', () => {
     const schemas = spec.components?.schemas ?? {};
     expect(schemas.Instance).toBeDefined();
@@ -34,6 +54,15 @@ describe('buildOpenApiSpec', () => {
     const inst: any = schemas.Instance;
     expect(inst.type).toBe('object');
     expect(inst.required).toEqual(expect.arrayContaining(['pid', 'port', 'cwd', 'startedAt']));
+  });
+
+  it('defines cross-council component schemas', () => {
+    const schemas = spec.components?.schemas ?? {};
+    expect(schemas.CouncillorInfo).toBeDefined();
+    expect(schemas.CouncilResponse).toBeDefined();
+    expect(schemas.Peer).toBeDefined();
+    expect(schemas.PeersResponse).toBeDefined();
+    expect(schemas.TurnResponse).toBeDefined();
   });
 
   it('is JSON-serializable', () => {

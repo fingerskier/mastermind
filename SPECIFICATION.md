@@ -136,6 +136,16 @@ A reusable, shareable definition of a council type — councillor roles, persona
 
 A multi-turn round-table among councillors with the director participating each round. The director picks a chair, a topic, and attendees. Each round the director speaks first (or skips), then attending councillors speak in randomized order. When the director ends the meeting, the chair writes a synthesis that is scanned for `<<MEMORY>>` / `<<JOB>>` blocks via the existing reflection plumbing. Topic, per-turn transcript, rolling summary, and synthesis are embedded into the memory index so future jobs can retrieve them. While running, the meeting holds the busy-slot for every attendee; jobs assigned to in-meeting councillors stay `queued` until the meeting ends.
 
+A meeting may include **remote attendees** — councillors belonging to other councils running on the same machine. When a remote attendee's turn comes up, the host summons it over a loopback-only HTTP API (`POST /api/meeting/turn`); the peer runs that councillor with its own persona, memory, adapter, and cwd, and returns the turn text. The host owns the transcript, chair, synthesis, and reflection; the peer only logs participation. Discovery uses the running-instance registry (`/api/instances` → `/api/council` → `/api/peers`). Servers bind `127.0.0.1` and the summon endpoint rejects non-loopback callers, so cross-machine summons are refused.
+
+#### Cross-council API endpoints
+
+| Method | Path | Description |
+|---|---|---|
+| `GET` | `/api/council` | Returns `{ slug, name, councillors: [{slug, label, adapter, busy}] }` — this council's identity and live roster. |
+| `GET` | `/api/peers` | Returns `{ peers: Peer[] }` where each `Peer = {council_slug, name, cwd, port, councillors: [{slug, label, adapter, busy}]}`. Discovered via the instance registry; self excluded; unreachable instances dropped. |
+| `POST` | `/api/meeting/turn` | **Loopback-only** (non-loopback callers receive 403). Body `{ meeting_id, host_council, councillor_slug, context: {title, topic, summary, recent_turns, speaker_instruction} }`. Runs one councillor turn locally and returns `{ ok:true, text, duration_ms }` or `{ ok:false, exit_code, detail }`. Returns 409 if the councillor is busy, 400 on bad/oversized/path-traversal identifiers, 404 if the councillor doesn't exist. |
+
 ### Dogfood Council
 
 A built-in council for testing Landsraad itself. The CLI command `npm run dogfood:init [path]` seeds the target directory (default `./dogfood`) with two `mock:local` councillors, one shared memory note, and one sample job. From there, `cd dogfood && npx landsraad` (or `LANDSRAAD_COUNCIL_ROOT=./dogfood npm run dev` from the repo) operates against it. This is what the director uses to exercise the app without burning real-CLI tokens.

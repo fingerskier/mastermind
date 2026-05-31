@@ -141,6 +141,10 @@ curl http://localhost:10191/api/instances
 
 The registry is shared via the file at `LANDSRAAD_INSTANCES_FILE`, so each instance sees the others. Crashed processes are pruned by PID liveness on every read.
 
+### Cross-council meetings
+
+Multiple councils running at once on the same machine can hold a **cross-council meeting**: when you create a meeting, the New Meeting page lists councillors from other running councils under "Remote councils". A remote attendee runs on its own council (its persona, memory, and adapter); your council orchestrates the meeting and owns the transcript. Summons are loopback-only — the server binds `127.0.0.1` and refuses cross-machine summon requests.
+
 ## API discovery
 
 `GET /api/openapi.json` returns an OpenAPI 3.1 document describing the JSON `/api/*` surface — handy for tooling, codegen, or quick discovery:
