@@ -23,11 +23,11 @@ describe('cli adapter configs', () => {
     expect(cfg!.stdinMode).toBe('pipe');
   });
 
-  it('grok CLI passes the prompt as the --prompt argument value', () => {
+  it('grok CLI runs single-turn headless via --single (official xAI CLI)', () => {
     const cfg = getCliConfig('cli:grok');
     expect(cfg).not.toBeNull();
     expect(cfg!.command).toBe('grok');
     expect(cfg!.stdinMode).toBe('arg');
-    expect(cfg!.args('hello world')).toEqual(['--prompt', 'hello world']);
+    expect(cfg!.args('hello world')).toEqual(['--single', 'hello world']);
   });
 });

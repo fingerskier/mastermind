@@ -80,11 +80,11 @@ const KNOWN_ADAPTERS: KnownAdapter[] = [
     id: 'cli:grok',
     label: 'Grok CLI (xAI)',
     available: true,
-    note: 'Requires `grok` on PATH.',
+    note: 'Requires the official xAI `grok` CLI on PATH.',
     command: 'grok',
-    install: 'npm install -g @vibe-kit/grok-cli',
-    docsUrl: 'https://github.com/superagent-ai/grok-cli',
-    blurb: 'xAI Grok agent. Needs an xAI API key (set `GROK_API_KEY` or run `grok` to configure).'
+    install: 'See https://x.ai/cli',
+    docsUrl: 'https://x.ai/cli',
+    blurb: 'Official xAI Grok agent CLI. Authenticate with `grok login` (use `grok login --device-auth` for headless environments).'
   },
   { id: 'sdk:claude', label: 'Claude SDK', available: false, note: 'Not yet implemented.' },
   { id: 'sdk:codex', label: 'Codex SDK', available: false, note: 'Not yet implemented.' }

@@ -30,7 +30,9 @@ const REGISTRY: Record<string, CliAdapterConfig> = {
   'cli:grok': {
     id: 'cli:grok',
     command: 'grok',
-    args: (prompt) => ['--prompt', prompt],
+    // Official xAI Grok CLI (https://x.ai/cli): `--single <PROMPT>` runs a
+    // single-turn headless request, prints the response to stdout, and exits.
+    args: (prompt) => ['--single', prompt],
     stdinMode: 'arg'
   }
 };

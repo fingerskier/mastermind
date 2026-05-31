@@ -14,10 +14,10 @@ describe('listInstallableAdapters', () => {
     expect(ids).not.toContain('sdk:codex');
   });
 
-  it('gives every entry a binary, an npm install command, and an https docs link', () => {
+  it('gives every entry a binary, an install hint, and an https docs link', () => {
     for (const a of listInstallableAdapters()) {
       expect(a.command, a.id).toBeTruthy();
-      expect(a.install, a.id).toContain('npm install -g');
+      expect(a.install, a.id).toBeTruthy();
       expect(a.docsUrl, a.id).toMatch(/^https:\/\//);
       expect(a.label, a.id).toBeTruthy();
     }

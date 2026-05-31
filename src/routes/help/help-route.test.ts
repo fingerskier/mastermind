@@ -12,7 +12,7 @@ describe('help route load', () => {
     const ids = data.adapters.map((a) => a.id).sort();
     expect(ids).toEqual(['cli:claude', 'cli:codex', 'cli:gemini', 'cli:grok']);
     for (const a of data.adapters) {
-      expect(a.install).toContain('npm install -g');
+      expect(a.install).toBeTruthy();
       expect(a.docsUrl).toMatch(/^https:\/\//);
     }
   });
