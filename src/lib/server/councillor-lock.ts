@@ -6,7 +6,11 @@ export type LockHolder =
 const slots = new Map<string, LockHolder>();
 
 function eq(a: LockHolder, b: LockHolder): boolean {
-  return a.kind === b.kind && a.id === b.id;
+  if (a.kind !== b.kind || a.id !== b.id) return false;
+  // remote-meeting carries `host` specifically to disambiguate colliding meeting ids
+  // across hosts — a release from a different host must not free this slot.
+  if (a.kind === 'remote-meeting') return a.host === (b as { host: string }).host;
+  return true;
 }
 
 export function tryAcquire(slug: string, holder: LockHolder): boolean {

@@ -48,4 +48,14 @@ describe('councillor-lock remote-meeting holder', () => {
     release('leto', { kind: 'remote-meeting', id: 'm1', host: 'eng-council' });
     expect(current('leto')).toBeNull();
   });
+
+  it('does not release a remote-meeting hold for a different host with a colliding id', () => {
+    const holder = { kind: 'remote-meeting' as const, id: 'm1', host: 'eng-council' };
+    tryAcquire('leto', holder);
+    // A different host with the same meeting id must not free this slot.
+    release('leto', { kind: 'remote-meeting', id: 'm1', host: 'ops-council' });
+    expect(current('leto')).toEqual(holder);
+    release('leto', { kind: 'remote-meeting', id: 'm1', host: 'eng-council' });
+    expect(current('leto')).toBeNull();
+  });
 });
