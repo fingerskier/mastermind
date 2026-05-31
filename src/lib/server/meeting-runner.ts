@@ -24,7 +24,7 @@ import { resolveAdapter } from './adapters';
 import { runAdapter } from './adapters/runAdapter';
 import { councilRoot } from './paths';
 import { assembleContextFor } from './context';
-import { MEETING_TURN_TIMEOUT_MS, MEETING_SUMMARY_TIMEOUT_MS } from './config';
+import { MEETING_TURN_TIMEOUT_MS, MEETING_SUMMARY_TIMEOUT_MS, MEETING_MODEL } from './config';
 import { buildSpeakerInstruction } from './meeting-prompt';
 import { applyReflectionBlocks } from './reflection';
 import { writeSynthesis } from './meetings';
@@ -43,7 +43,7 @@ async function refreshSummaryIfNeeded(meetingId: string): Promise<void> {
   if (displaced.length === 0) return;
 
   const chair = await readCouncillor(m.chair_slug);
-  const adapter = resolveAdapter(chair.adapter);
+  const adapter = resolveAdapter(chair.adapter, { modelDefault: MEETING_MODEL });
   if (!adapter) return;
 
   const prior = await readSummary(meetingId);
@@ -312,7 +312,7 @@ export async function advance(id: string): Promise<void> {
 
   // ── Local attendee path ───────────────────────────────────────────────────
   const councillor = await readCouncillor(speakerSlug);
-  const adapter = resolveAdapter(councillor.adapter);
+  const adapter = resolveAdapter(councillor.adapter, { modelDefault: MEETING_MODEL });
   if (!adapter) {
     const cur = await readMeeting(id);
     cur.status = 'paused';
@@ -430,7 +430,7 @@ export async function endMeeting(id: string, now: Date = new Date()): Promise<vo
   await appendMeetingEvent(id, { at: now.toISOString(), type: 'synthesizing' });
 
   const chair = await readCouncillor(synthesizing.chair_slug);
-  const adapter = resolveAdapter(chair.adapter);
+  const adapter = resolveAdapter(chair.adapter, { modelDefault: MEETING_MODEL });
   const topic = await readTopic(id);
   const summary = await readSummary(id);
   const transcript = await readTx(id);

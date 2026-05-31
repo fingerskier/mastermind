@@ -8,7 +8,7 @@ import { assembleContextFor } from '$lib/server/context';
 import { composeRemoteTurnPrompt } from '$lib/server/meeting-prompt';
 import { appendIncomingParticipation } from '$lib/server/participation';
 import { councilRoot } from '$lib/server/paths';
-import { MEETING_TURN_TIMEOUT_MS } from '$lib/server/config';
+import { MEETING_TURN_TIMEOUT_MS, MEETING_MODEL } from '$lib/server/config';
 import type { MeetingContextDTO } from '$lib/server/meeting-remote';
 import type { RequestHandler } from './$types';
 
@@ -46,7 +46,7 @@ export const POST: RequestHandler = async ({ request, getClientAddress }) => {
   }
 
   try {
-    const adapter = resolveAdapter(councillor.adapter);
+    const adapter = resolveAdapter(councillor.adapter, { modelDefault: MEETING_MODEL });
     if (!adapter) {
       console.error('meeting/turn: unknown adapter', councillor.adapter);
       return json({ ok: false, exit_code: -1, detail: `unknown adapter "${councillor.adapter}"` }, { status: 200 });

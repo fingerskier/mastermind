@@ -27,6 +27,10 @@ export const ENV_KEY_SUGGESTIONS: EnvKeySuggestion[] = [
     key: 'LANDSRAAD_MEETING_TURN_NUDGE',
     description: 'Text appended to every meeting turn — e.g. "Be terse — 1-3 sentences."'
   },
+  {
+    key: 'LANDSRAAD_MEETING_MODEL',
+    description: 'Model for all meeting turns — e.g. "haiku". A councillor ?model= pin still wins.'
+  },
   { key: 'LANDSRAAD_MEETING_WINDOW_K', description: 'Recent turns shown per meeting turn (default 4)' },
   {
     key: 'LANDSRAAD_MEETING_TURN_TIMEOUT_MS',

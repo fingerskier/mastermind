@@ -34,6 +34,7 @@ describe('ENV_KEY_SUGGESTIONS', () => {
     const keys = new Set(ENV_KEY_SUGGESTIONS.map((s) => s.key));
     for (const k of [
       'LANDSRAAD_MEETING_TURN_NUDGE',
+      'LANDSRAAD_MEETING_MODEL',
       'LANDSRAAD_MEETING_WINDOW_K',
       'LANDSRAAD_MEETING_TURN_TIMEOUT_MS',
       'LANDSRAAD_MEETING_SUMMARY_TIMEOUT_MS',

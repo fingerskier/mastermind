@@ -26,3 +26,14 @@ export const PEER_DISCOVERY_TIMEOUT_MS = envInt('LANDSRAAD_PEER_DISCOVERY_TIMEOU
  * knob governs the whole meeting, including remote peers.
  */
 export const MEETING_TURN_NUDGE = envStr('LANDSRAAD_MEETING_TURN_NUDGE', '');
+
+/**
+ * Host-wide model override for meeting turns. Empty by default. When set (e.g.
+ * `LANDSRAAD_MEETING_MODEL=haiku`), every meeting LLM call this server runs —
+ * attendee turns, rolling summaries, and the closing synthesis — uses this
+ * model instead of the CLI's default, letting an operator run cheap/fast
+ * meetings without editing each councillor. A per-councillor `?model=` pin in
+ * the adapter string still wins. Per-process: each participating server reads
+ * its own value, so it also governs the turns it serves as a remote peer.
+ */
+export const MEETING_MODEL = envStr('LANDSRAAD_MEETING_MODEL', '');

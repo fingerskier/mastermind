@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { getCliConfig, parseAdapterId } from './cli';
+import { effectiveModel, getCliConfig, parseAdapterId } from './cli';
 
 describe('cli adapter configs', () => {
   it('codex exec is invoked with --skip-git-repo-check so non-git council dirs work', () => {
@@ -53,6 +53,25 @@ describe('parseAdapterId', () => {
   it('resolves getCliConfig against the parsed base', () => {
     const { base } = parseAdapterId('cli:claude?model=x');
     expect(getCliConfig(base)).not.toBeNull();
+  });
+});
+
+describe('effectiveModel', () => {
+  it('returns undefined for a bare id with no default', () => {
+    expect(effectiveModel('cli:claude')).toBeUndefined();
+  });
+
+  it('applies the host-wide default when the adapter pins no model', () => {
+    expect(effectiveModel('cli:claude', 'haiku')).toBe('haiku');
+  });
+
+  it('lets a per-councillor ?model= win over the host-wide default', () => {
+    expect(effectiveModel('cli:claude?model=opus', 'haiku')).toBe('opus');
+  });
+
+  it('trims whitespace and treats a blank default as no override', () => {
+    expect(effectiveModel('cli:claude', '   ')).toBeUndefined();
+    expect(effectiveModel('cli:claude?model=', 'haiku')).toBe('haiku');
   });
 });
 

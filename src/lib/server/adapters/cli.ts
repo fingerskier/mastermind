@@ -101,6 +101,17 @@ export function parseAdapterId(adapterId: string): ParsedAdapterId {
   return { base, params };
 }
 
+/**
+ * Resolve the model id for a CLI adapter turn. A per-councillor `?model=` pin
+ * wins; otherwise the caller's `modelDefault` (e.g. the host-wide
+ * `LANDSRAAD_MEETING_MODEL`) applies. Returns undefined when neither is set,
+ * so the CLI runs on its own default model.
+ */
+export function effectiveModel(adapterId: string, modelDefault?: string): string | undefined {
+  const { params } = parseAdapterId(adapterId);
+  return params.model?.trim() || modelDefault?.trim() || undefined;
+}
+
 export function getCliConfig(adapterId: string): CliAdapterConfig | null {
   return REGISTRY[adapterId] ?? null;
 }

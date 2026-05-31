@@ -1,6 +1,16 @@
 import type { AdapterRunStreams } from './types';
 import { createMockAdapter } from './mock';
-import { getCliConfig, listCliAdapterIds, parseAdapterId, runCliAdapter } from './cli';
+import { effectiveModel, getCliConfig, listCliAdapterIds, parseAdapterId, runCliAdapter } from './cli';
+
+/** Options for {@link resolveAdapter}. */
+export interface ResolveAdapterOpts {
+  /**
+   * Model id to use when the adapter string does not pin one with `?model=`.
+   * Meeting call sites pass `LANDSRAAD_MEETING_MODEL` here so a host can run a
+   * lighter model for every meeting turn without editing each councillor.
+   */
+  modelDefault?: string;
+}
 
 export interface ResolvedAdapter {
   id: string;
@@ -8,16 +18,16 @@ export interface ResolvedAdapter {
   run(args: { prompt: string; cwd: string; signal?: AbortSignal }): AdapterRunStreams;
 }
 
-export function resolveAdapter(adapterId: string): ResolvedAdapter | null {
+export function resolveAdapter(adapterId: string, opts?: ResolveAdapterOpts): ResolvedAdapter | null {
   if (!adapterId) return null;
-  const { base, params } = parseAdapterId(adapterId);
+  const { base } = parseAdapterId(adapterId);
   if (base === 'mock:local') {
     const m = createMockAdapter();
     return { id: m.id, kind: 'mock', run: m.run };
   }
   const cli = getCliConfig(base);
   if (cli) {
-    const model = params.model?.trim() || undefined;
+    const model = effectiveModel(adapterId, opts?.modelDefault);
     return {
       id: adapterId,
       kind: 'cli',
