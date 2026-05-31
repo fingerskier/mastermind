@@ -30,7 +30,7 @@ export const POST: RequestHandler = async ({ request, getClientAddress }) => {
   }
   // Reject path-traversal / oversized identifiers before they touch the filesystem or audit log.
   const SLUG_RE = /^[a-z0-9-]{1,64}$/;       // councillor slug = slugify() output
-  const ID_RE = /^[a-z0-9:._-]{1,128}$/;     // meeting id / host council slug
+  const ID_RE = /^[A-Za-z0-9:._-]{1,128}$/;  // meeting id (ISO ts has T/Z) / host council slug
   if (!SLUG_RE.test(body.councillor_slug) || !ID_RE.test(body.meeting_id) || !ID_RE.test(body.host_council)) {
     return json({ error: 'bad request' }, { status: 400 });
   }

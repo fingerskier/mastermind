@@ -94,6 +94,16 @@ describe('POST /api/meeting/turn', () => {
     expect(res.status).toBe(400);
   });
 
+  it('accepts a real timestamped meeting_id (uppercase T/Z from ISO)', async () => {
+    // meetingIdFor() yields e.g. 2026-05-31T21-00-12-212Z-topic — the T and Z are
+    // uppercase, so the id validator must allow them or every real summon 400s.
+    const meeting_id = '2026-05-31T21-00-12-212Z-lite-model-debate';
+    const res = await POST(event({ meeting_id, host_council: 'eng', councillor_slug: 'leto', context: ctx }));
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body.ok).toBe(true);
+  });
+
   it('returns 400 when meeting_id is missing', async () => {
     const res = await POST(event({ host_council: 'eng', councillor_slug: 'leto', context: ctx }));
     expect(res.status).toBe(400);
