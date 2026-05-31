@@ -28,9 +28,9 @@ describe('example/writing-team.template.json', () => {
     expect(Object.keys(bySlug).sort()).toEqual([
       'amanuensis',
       'editor',
-      'factcheck',
       'reader',
-      'researcher'
+      'researcher',
+      'skeptic'
     ]);
 
     expect(bySlug.editor.role).toBe('Synthesizer');
@@ -42,8 +42,12 @@ describe('example/writing-team.template.json', () => {
     expect(bySlug.researcher.role).toBe('Implementer');
     expect(bySlug.researcher.adapter).toBe('cli:codex');
 
-    expect(bySlug.factcheck.role).toBe('Critic');
-    expect(bySlug.factcheck.adapter).toBe('cli:codex');
+    expect(bySlug.skeptic.name).toBe('Skeptic');
+    expect(bySlug.skeptic.role).toBe('Critic');
+    expect(bySlug.skeptic.adapter).toBe('cli:codex');
+    expect(bySlug.skeptic.routing_hint).toContain('adversarial refutation');
+    expect(bySlug.skeptic.persona).toContain('# Persona — Skeptic');
+    expect(bySlug.skeptic.persona).toContain('Assume the draft is wrong until proven right.');
 
     expect(bySlug.reader.role).toBe('Evangelist');
     expect(bySlug.reader.adapter).toBe('cli:claude');
