@@ -4,7 +4,16 @@ import { listInstallableAdapters } from './index';
 describe('listInstallableAdapters', () => {
   it('returns one entry per available CLI adapter', () => {
     const ids = listInstallableAdapters().map((a) => a.id).sort();
-    expect(ids).toEqual(['cli:claude', 'cli:codex', 'cli:gemini', 'cli:grok']);
+    expect(ids).toEqual([
+      'cli:aider',
+      'cli:claude',
+      'cli:codex',
+      'cli:gemini',
+      'cli:grok',
+      'cli:qwen',
+      'cli:vibe',
+      'cli:warp'
+    ]);
   });
 
   it('excludes mock and not-yet-implemented SDK adapters', () => {

@@ -34,7 +34,7 @@ A v0 with no agent execution is mostly forms + a filesystem CRUD layer. SvelteKi
 - `src/lib/server/context.ts` — `assembleContextFor(councillor_slug, brief)` — top-K semantic retrieval (shared + private) with char budget + fallback.
 - `src/lib/server/config.ts` — tuning constants (`MEMORY_TOPK_SHARED`, `MEMORY_TOPK_PRIVATE`, `MEMORY_CHAR_BUDGET`). No UI in v1.
 - `src/lib/server/templates.ts` — council-template schema, loader (URL or path), `planApply` / `applyTemplate` (preview-then-confirm), `exportSelection`, named errors.
-- `src/lib/server/adapters/` — adapter implementations (`mock:local`, `cli:claude`, `cli:codex`, `cli:gemini`, `cli:grok`).
+- `src/lib/server/adapters/` — adapter implementations (`mock:local`, `cli:claude`, `cli:codex`, `cli:gemini`, `cli:grok`, `cli:qwen`, `cli:vibe`, `cli:aider`, `cli:warp`).
 - `src/lib/server/indexer.ts` + `embeddings.ts` — semantic index over markdown surfaces.
 - `src/lib/server/peers.ts` — discover peer councils (instances ⨯ `/api/council`); resolve a peer's live port by durable `cwd`.
 - `src/lib/server/meeting-remote.ts` — `summonRemoteTurn()`: POST `/api/meeting/turn`, map busy/unreachable/turn_failed.

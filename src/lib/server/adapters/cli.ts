@@ -34,6 +34,38 @@ const REGISTRY: Record<string, CliAdapterConfig> = {
     // single-turn headless request, prints the response to stdout, and exits.
     args: (prompt) => ['--single', prompt],
     stdinMode: 'arg'
+  },
+  'cli:qwen': {
+    id: 'cli:qwen',
+    command: 'qwen',
+    // Qwen Code (gemini-cli fork): a piped stdin runs headless, printing the
+    // reply to stdout and exiting. Equivalent to `qwen -p "<prompt>"`.
+    args: () => [],
+    stdinMode: 'pipe'
+  },
+  'cli:vibe': {
+    id: 'cli:vibe',
+    command: 'vibe',
+    // Mistral Vibe: piping a prompt via stdin runs in programmatic (auto-approve)
+    // mode without entering the interactive chat loop.
+    args: () => [],
+    stdinMode: 'pipe'
+  },
+  'cli:aider': {
+    id: 'cli:aider',
+    command: 'aider',
+    // Aider scripting: `--message` sends one message, processes the reply, then
+    // exits. `--yes` skips confirmations and `--no-auto-commits` leaves git alone.
+    args: (prompt) => ['--message', prompt, '--yes', '--no-auto-commits'],
+    stdinMode: 'arg'
+  },
+  'cli:warp': {
+    id: 'cli:warp',
+    command: 'oz',
+    // Warp's headless agent runs through the Oz CLI: `oz agent run --prompt`
+    // executes locally and prints results to stdout.
+    args: (prompt) => ['agent', 'run', '--prompt', prompt],
+    stdinMode: 'arg'
   }
 };
 

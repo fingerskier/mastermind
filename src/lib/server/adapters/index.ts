@@ -86,6 +86,46 @@ const KNOWN_ADAPTERS: KnownAdapter[] = [
     docsUrl: 'https://x.ai/cli',
     blurb: 'Official xAI Grok agent CLI. Authenticate with `grok login` (use `grok login --device-auth` for headless environments).'
   },
+  {
+    id: 'cli:qwen',
+    label: 'Qwen Code',
+    available: true,
+    note: 'Requires `qwen` on PATH.',
+    command: 'qwen',
+    install: 'npm install -g @qwen-code/qwen-code',
+    docsUrl: 'https://github.com/QwenLM/qwen-code',
+    blurb: 'Alibaba’s open-source terminal coding agent (a gemini-cli fork). After install, run `qwen` once to authenticate.'
+  },
+  {
+    id: 'cli:vibe',
+    label: 'Mistral Vibe',
+    available: true,
+    note: 'Requires `vibe` on PATH.',
+    command: 'vibe',
+    install: 'uv tool install mistral-vibe',
+    docsUrl: 'https://docs.mistral.ai/mistral-vibe/introduction',
+    blurb: 'Mistral’s terminal coding agent. After install, run `vibe` once to sign in; piped prompts run in auto-approve mode.'
+  },
+  {
+    id: 'cli:aider',
+    label: 'Aider',
+    available: true,
+    note: 'Requires `aider` on PATH and an LLM API key in the environment.',
+    command: 'aider',
+    install: 'python -m pip install aider-install && aider-install',
+    docsUrl: 'https://aider.chat/docs/scripting.html',
+    blurb: 'AI pair programmer. Set your model’s API key (e.g. OPENAI_API_KEY / ANTHROPIC_API_KEY); each turn runs as `aider --message … --yes --no-auto-commits`.'
+  },
+  {
+    id: 'cli:warp',
+    label: 'Warp (Oz CLI)',
+    available: true,
+    note: 'Requires the Warp `oz` CLI on PATH.',
+    command: 'oz',
+    install: 'brew install --cask oz',
+    docsUrl: 'https://docs.warp.dev/reference/cli/',
+    blurb: 'Warp’s headless agent. Authenticate with `oz login` (or set WARP_API_KEY for headless environments); each turn runs as `oz agent run --prompt …`.'
+  },
   { id: 'sdk:claude', label: 'Claude SDK', available: false, note: 'Not yet implemented.' },
   { id: 'sdk:codex', label: 'Codex SDK', available: false, note: 'Not yet implemented.' }
 ];

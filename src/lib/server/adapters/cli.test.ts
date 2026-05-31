@@ -30,4 +30,39 @@ describe('cli adapter configs', () => {
     expect(cfg!.stdinMode).toBe('arg');
     expect(cfg!.args('hello world')).toEqual(['--single', 'hello world']);
   });
+
+  it('qwen CLI runs headless via piped stdin', () => {
+    const cfg = getCliConfig('cli:qwen');
+    expect(cfg).not.toBeNull();
+    expect(cfg!.command).toBe('qwen');
+    expect(cfg!.stdinMode).toBe('pipe');
+  });
+
+  it('vibe CLI (Mistral) runs non-interactively via piped stdin', () => {
+    const cfg = getCliConfig('cli:vibe');
+    expect(cfg).not.toBeNull();
+    expect(cfg!.command).toBe('vibe');
+    expect(cfg!.stdinMode).toBe('pipe');
+  });
+
+  it('aider runs a single message then exits, with confirmations and auto-commits disabled', () => {
+    const cfg = getCliConfig('cli:aider');
+    expect(cfg).not.toBeNull();
+    expect(cfg!.command).toBe('aider');
+    expect(cfg!.stdinMode).toBe('arg');
+    expect(cfg!.args('hello world')).toEqual([
+      '--message',
+      'hello world',
+      '--yes',
+      '--no-auto-commits'
+    ]);
+  });
+
+  it('warp uses the Oz CLI to run an agent headlessly', () => {
+    const cfg = getCliConfig('cli:warp');
+    expect(cfg).not.toBeNull();
+    expect(cfg!.command).toBe('oz');
+    expect(cfg!.stdinMode).toBe('arg');
+    expect(cfg!.args('hello world')).toEqual(['agent', 'run', '--prompt', 'hello world']);
+  });
 });

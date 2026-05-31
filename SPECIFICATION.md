@@ -65,6 +65,10 @@ The bridge between a councillor and an actual model invocation. v1 supports two 
 | `cli:codex` | Spawns `codex exec <prompt>` as a subprocess, captures stdout. |
 | `cli:gemini` | Spawns `gemini` (Gemini CLI) in headless mode, pipes the prompt via stdin, captures stdout. |
 | `cli:grok` | Spawns `grok --prompt <prompt>` (xAI Grok CLI) in headless mode, captures stdout. |
+| `cli:qwen` | Spawns `qwen` (Qwen Code, a gemini-cli fork) in headless mode, pipes the prompt via stdin, captures stdout. |
+| `cli:vibe` | Spawns `vibe` (Mistral Vibe) in programmatic/auto-approve mode, pipes the prompt via stdin, captures stdout. |
+| `cli:aider` | Spawns `aider --message <prompt> --yes --no-auto-commits`, processes the single reply, captures stdout. |
+| `cli:warp` | Spawns `oz agent run --prompt <prompt>` (Warp's Oz CLI) headlessly, captures stdout. |
 | *(empty)* | The councillor cannot be run. Jobs assigned to them stay queued until the adapter is set. |
 
 CLI adapters inherit the user's environment (so auth set up outside Landsraad just works). They run with `cwd` set to the council directory so the CLI can read memory files relative to a known root.
