@@ -6,11 +6,28 @@ export interface CliArgsOpts {
   model?: string;
 }
 
+/** Service-agnostic capability tiers. Most CLIs expose a cheap/balanced/top trio. */
+export type ModelTier = 'lite' | 'medium' | 'heavy';
+
 export interface CliAdapterConfig {
   id: string;
   command: string;
   args: (prompt: string, opts?: CliArgsOpts) => string[];
   stdinMode: 'arg' | 'pipe';
+  /**
+   * Maps the service-agnostic tiers `lite`/`medium`/`heavy` to this CLI's own
+   * model ids. Lets `LANDSRAAD_MEETING_MODEL=lite` (or `?model=heavy`) mean the
+   * right thing per adapter. Omit when the CLI takes no `--model` — a tier
+   * keyword then no-ops to the CLI's default model.
+   */
+  tiers?: Record<ModelTier, string>;
+}
+
+const TIER_KEYS: readonly ModelTier[] = ['lite', 'medium', 'heavy'];
+
+function asTier(value: string): ModelTier | null {
+  const lower = value.toLowerCase();
+  return (TIER_KEYS as readonly string[]).includes(lower) ? (lower as ModelTier) : null;
 }
 
 const REGISTRY: Record<string, CliAdapterConfig> = {
@@ -18,7 +35,9 @@ const REGISTRY: Record<string, CliAdapterConfig> = {
     id: 'cli:claude',
     command: 'claude',
     args: (_prompt, opts) => (opts?.model?.trim() ? ['-p', '--model', opts.model.trim()] : ['-p']),
-    stdinMode: 'pipe'
+    stdinMode: 'pipe',
+    // The claude CLI accepts these short aliases directly (`claude --model sonnet`).
+    tiers: { lite: 'haiku', medium: 'sonnet', heavy: 'opus' }
   },
   'cli:codex': {
     id: 'cli:codex',
@@ -104,12 +123,19 @@ export function parseAdapterId(adapterId: string): ParsedAdapterId {
 /**
  * Resolve the model id for a CLI adapter turn. A per-councillor `?model=` pin
  * wins; otherwise the caller's `modelDefault` (e.g. the host-wide
- * `LANDSRAAD_MEETING_MODEL`) applies. Returns undefined when neither is set,
- * so the CLI runs on its own default model.
+ * `LANDSRAAD_MEETING_MODEL`) applies. Either value may be a literal model id or
+ * a service-agnostic tier (`lite`/`medium`/`heavy`); a tier is mapped through
+ * the adapter's own `tiers` table, so one knob means "cheap" across a mixed
+ * fleet. A tier for an adapter with no table no-ops to the CLI default.
+ * Returns undefined when nothing resolves, so the CLI runs its own default.
  */
 export function effectiveModel(adapterId: string, modelDefault?: string): string | undefined {
-  const { params } = parseAdapterId(adapterId);
-  return params.model?.trim() || modelDefault?.trim() || undefined;
+  const { base, params } = parseAdapterId(adapterId);
+  const raw = params.model?.trim() || modelDefault?.trim() || undefined;
+  if (!raw) return undefined;
+  const tier = asTier(raw);
+  if (!tier) return raw;
+  return getCliConfig(base)?.tiers?.[tier] ?? undefined;
 }
 
 export function getCliConfig(adapterId: string): CliAdapterConfig | null {

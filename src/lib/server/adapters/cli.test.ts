@@ -75,6 +75,38 @@ describe('effectiveModel', () => {
   });
 });
 
+describe('effectiveModel tier aliases', () => {
+  it('maps a lite/medium/heavy host-wide default through the adapter tier table', () => {
+    expect(effectiveModel('cli:claude', 'lite')).toBe('haiku');
+    expect(effectiveModel('cli:claude', 'medium')).toBe('sonnet');
+    expect(effectiveModel('cli:claude', 'heavy')).toBe('opus');
+  });
+
+  it('maps a tier keyword supplied via a per-councillor ?model= pin', () => {
+    expect(effectiveModel('cli:claude?model=heavy', 'lite')).toBe('opus');
+  });
+
+  it('matches tier keywords case-insensitively', () => {
+    expect(effectiveModel('cli:claude', 'Heavy')).toBe('opus');
+  });
+
+  it('passes a literal model id through untouched (not a tier keyword)', () => {
+    expect(effectiveModel('cli:claude', 'claude-opus-4-8')).toBe('claude-opus-4-8');
+    expect(effectiveModel('cli:claude?model=claude-haiku-4-5')).toBe('claude-haiku-4-5');
+  });
+
+  it('no-ops a tier keyword for an adapter that defines no tier table (falls back to CLI default)', () => {
+    expect(effectiveModel('cli:codex', 'lite')).toBeUndefined();
+  });
+});
+
+describe('cli adapter tier tables', () => {
+  it('claude exposes lite/medium/heavy tier aliases', () => {
+    const cfg = getCliConfig('cli:claude');
+    expect(cfg!.tiers).toEqual({ lite: 'haiku', medium: 'sonnet', heavy: 'opus' });
+  });
+});
+
 describe('cli adapter configs (more)', () => {
   it('gemini CLI runs headless via piped stdin', () => {
     const cfg = getCliConfig('cli:gemini');

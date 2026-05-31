@@ -66,7 +66,7 @@ Councillor, note, and private-memory entry slugs are derived from titles/names v
 }
 ```
 
-- `adapter` — free-form string. Conventions: `cli:<name>` (subprocess) or `sdk:<name>` (in-process API client). Empty string means "not configured yet." A `?model=<id>` suffix pins the model for this councillor's turns, e.g. `cli:claude?model=claude-haiku-4-5`; the pin wins over the host-wide `LANDSRAAD_MEETING_MODEL` env override, which in turn beats the CLI's own default.
+- `adapter` — free-form string. Conventions: `cli:<name>` (subprocess) or `sdk:<name>` (in-process API client). Empty string means "not configured yet." A `?model=<id>` suffix pins the model for this councillor's turns, e.g. `cli:claude?model=claude-haiku-4-5`; the pin wins over the host-wide `LANDSRAAD_MEETING_MODEL` env override, which in turn beats the CLI's own default. The value (in either the suffix or the env override) may be a literal model id or a service-agnostic tier — `lite`/`medium`/`heavy` — which each adapter maps to its own model (`cli:claude` → haiku/sonnet/opus). A tier no-ops for adapters with no mapping.
 - `routing_hint` — terse description used in the auto-generated council roster injected into each prompt. Lets other councillors route `<<JOB councillor="...">>` proposals correctly.
 - `reflect` — opt-out flag for the post-job reflection pass. Default `true`. When `false`, the runner skips reflection entirely after this councillor's jobs succeed.
 
