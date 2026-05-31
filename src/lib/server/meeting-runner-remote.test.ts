@@ -12,7 +12,7 @@ vi.mock('./peers', async (orig) => {
 
 import { startMeeting, directorSpeak, resumeMeeting } from './meeting-runner';
 import { readMeeting, readTranscript } from './meetings';
-import { createCouncil } from './councils';
+import { createCouncil, readCouncil } from './councils';
 import { createCouncillor } from './councillors';
 
 const remote = { council_slug: 'ops', councillor_slug: 'gurney', cwd: '/ops', label: 'Gurney' };
@@ -37,6 +37,8 @@ describe('cross-council meeting turns', () => {
     expect(tx).toContain('remote says hi');
     const fresh = await readMeeting(m.id);
     expect(fresh.status).not.toBe('paused');
+    const { slug } = await readCouncil();
+    expect(summonMock).toHaveBeenCalledWith(expect.objectContaining({ host_council: slug }));
   });
 
   it('pauses with remote_unreachable when the peer is gone', async () => {

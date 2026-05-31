@@ -17,6 +17,7 @@ import {
 } from './meetings';
 import type { Meeting, RemoteAttendee } from '$lib/types';
 import { readCouncillor } from './councillors';
+import { readCouncil } from './councils';
 import { summonRemoteTurn } from './meeting-remote';
 import { resolvePeerPort } from './peers';
 import { resolveAdapter } from './adapters';
@@ -242,11 +243,12 @@ export async function advance(id: string): Promise<void> {
         (t) => `## Turn ${t.turnIndex} — ${t.speaker} — ${t.at}\n\n${t.body}`
       );
 
+      const hostCouncil = await readCouncil();
       const result = await summonRemoteTurn({
         cwd: remote.cwd,
         councillor_slug: remote.councillor_slug,
         meeting_id: id,
-        host_council: after.chair_slug,
+        host_council: hostCouncil.slug,
         context: {
           title: after.title,
           topic,
