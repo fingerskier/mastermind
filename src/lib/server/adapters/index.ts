@@ -1,6 +1,6 @@
 import type { AdapterRunStreams } from './types';
 import { createMockAdapter } from './mock';
-import { getCliConfig, listCliAdapterIds, runCliAdapter } from './cli';
+import { getCliConfig, listCliAdapterIds, parseAdapterId, runCliAdapter } from './cli';
 
 export interface ResolvedAdapter {
   id: string;
@@ -10,16 +10,18 @@ export interface ResolvedAdapter {
 
 export function resolveAdapter(adapterId: string): ResolvedAdapter | null {
   if (!adapterId) return null;
-  if (adapterId === 'mock:local') {
+  const { base, params } = parseAdapterId(adapterId);
+  if (base === 'mock:local') {
     const m = createMockAdapter();
     return { id: m.id, kind: 'mock', run: m.run };
   }
-  const cli = getCliConfig(adapterId);
+  const cli = getCliConfig(base);
   if (cli) {
+    const model = params.model?.trim() || undefined;
     return {
-      id: cli.id,
+      id: adapterId,
       kind: 'cli',
-      run: (args) => runCliAdapter(cli, args)
+      run: (args) => runCliAdapter(cli, { ...args, model })
     };
   }
   return null;

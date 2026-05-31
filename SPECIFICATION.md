@@ -73,6 +73,8 @@ The bridge between a councillor and an actual model invocation. v1 supports two 
 
 CLI adapters inherit the user's environment (so auth set up outside Landsraad just works). They run with `cwd` set to the council directory so the CLI can read memory files relative to a known root.
 
+A CLI adapter string may carry a `?query` suffix to tune the invocation per councillor. Currently `cli:claude?model=<id>` injects `--model <id>` into the `claude -p` call — letting a councillor run a lighter/cheaper model (e.g. `cli:claude?model=claude-haiku-4-5`) without changing its persona or memory. Unknown params are ignored, and the bare form (`cli:claude`) keeps the CLI's default model. This is the per-councillor lever for "use a lite model in meetings": give the meeting attendee a `?model=` adapter while job-running councillors keep the default. (Other CLI adapters parse the suffix but only `cli:claude` consumes `model` today.)
+
 A council may carry a root `.env` file (`<councilRoot>/.env`) whose keys are loaded into the server environment at startup and inherited by adapter subprocesses — the in-app way to provide adapter API keys (`OPENAI_API_KEY`, `WARP_API_KEY`, …) and env-driven overrides. Edited at `/settings`. The council `.env` is authoritative (it overrides inherited values), changes take effect on restart, and it is never indexed, exported, or served — `ensureCouncilGitignore` keeps it out of git too.
 
 A future SDK adapter family (`sdk:anthropic`, `sdk:openai`) will use the same `Adapter` interface and slot in without breaking the job runner.

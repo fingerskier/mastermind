@@ -1,10 +1,15 @@
 import { spawn } from 'node:child_process';
 import type { AdapterChunk, AdapterResult, AdapterRunStreams } from './types';
 
+export interface CliArgsOpts {
+  /** Optional model id, e.g. from a `cli:claude?model=claude-haiku-4-5` adapter string. */
+  model?: string;
+}
+
 export interface CliAdapterConfig {
   id: string;
   command: string;
-  args: (prompt: string) => string[];
+  args: (prompt: string, opts?: CliArgsOpts) => string[];
   stdinMode: 'arg' | 'pipe';
 }
 
@@ -12,7 +17,7 @@ const REGISTRY: Record<string, CliAdapterConfig> = {
   'cli:claude': {
     id: 'cli:claude',
     command: 'claude',
-    args: () => ['-p'],
+    args: (_prompt, opts) => (opts?.model?.trim() ? ['-p', '--model', opts.model.trim()] : ['-p']),
     stdinMode: 'pipe'
   },
   'cli:codex': {
@@ -69,6 +74,33 @@ const REGISTRY: Record<string, CliAdapterConfig> = {
   }
 };
 
+export interface ParsedAdapterId {
+  /** The bare adapter id with any `?query` stripped, e.g. `cli:claude`. */
+  base: string;
+  /** Key/value pairs from a `?k=v&k2=v2` suffix. Empty when no query is present. */
+  params: Record<string, string>;
+}
+
+/**
+ * Split an adapter string into its base id and optional `?query` params.
+ * Lets a councillor pin a model per-adapter, e.g. `cli:claude?model=claude-haiku-4-5`,
+ * so meetings can run a lighter model than the councillor's default jobs.
+ */
+export function parseAdapterId(adapterId: string): ParsedAdapterId {
+  const qIdx = adapterId.indexOf('?');
+  if (qIdx === -1) return { base: adapterId, params: {} };
+  const base = adapterId.slice(0, qIdx);
+  const params: Record<string, string> = {};
+  for (const seg of adapterId.slice(qIdx + 1).split('&')) {
+    if (!seg) continue;
+    const eq = seg.indexOf('=');
+    const key = eq === -1 ? seg : seg.slice(0, eq);
+    const val = eq === -1 ? '' : seg.slice(eq + 1);
+    if (key) params[decodeURIComponent(key)] = decodeURIComponent(val);
+  }
+  return { base, params };
+}
+
 export function getCliConfig(adapterId: string): CliAdapterConfig | null {
   return REGISTRY[adapterId] ?? null;
 }
@@ -79,9 +111,9 @@ export function listCliAdapterIds(): string[] {
 
 export function runCliAdapter(
   config: CliAdapterConfig,
-  args: { prompt: string; cwd: string; signal?: AbortSignal; env?: NodeJS.ProcessEnv }
+  args: { prompt: string; cwd: string; signal?: AbortSignal; env?: NodeJS.ProcessEnv; model?: string }
 ): AdapterRunStreams {
-  const child = spawn(config.command, config.args(args.prompt), {
+  const child = spawn(config.command, config.args(args.prompt, { model: args.model }), {
     cwd: args.cwd,
     env: args.env ?? process.env,
     shell: process.platform === 'win32',
