@@ -38,7 +38,9 @@
     An adapter is the AI tool a councillor talks to. The built-in <code>mock:local</code> adapter
     echoes input and needs no setup &mdash; handy for trying things out. The adapters below each
     require installing a command-line tool. After installing, make sure the command runs in a
-    fresh terminal, then select the matching adapter on a councillor.
+    fresh terminal, then select the matching adapter on a councillor. Watch the
+    <strong>Heads up</strong> notes &mdash; some CLIs (Codex, Gemini, Qwen) want you to run them once
+    from the council folder to establish trust/auth before Landsraad can drive them headlessly.
   </p>
 
   <div class="adapters">
@@ -52,6 +54,7 @@
         <p class="field"><span class="k">Install</span> <code>{a.install}</code></p>
         <p class="field"><span class="k">Command</span> <code>{a.command}</code> must be on your <code>PATH</code></p>
         <p class="field"><span class="k">Docs</span> <a href={a.docsUrl} target="_blank" rel="noopener noreferrer">{a.docsUrl}</a></p>
+        {#if a.caveat}<p class="caveat"><span class="k">Heads up</span> {a.caveat}</p>{/if}
       </div>
     {/each}
   </div>
@@ -82,8 +85,13 @@
   .aid { color: var(--muted); }
   .blurb { color: var(--fg); }
   .field { font-size: 0.95em; }
-  .field .k { display: inline-block; min-width: 4.5rem; color: var(--muted); font-size: 0.85em; }
+  .field .k, .caveat .k { display: inline-block; min-width: 4.5rem; color: var(--muted); font-size: 0.85em; }
   .field a { word-break: break-all; }
+  .caveat {
+    font-size: 0.9em; margin-top: 0.6rem; padding: 0.5rem 0.65rem;
+    border-left: 3px solid var(--accent); background: #1a1d24; border-radius: 4px;
+  }
+  .caveat .k { color: var(--accent); }
   .tip { margin-top: 1rem; }
   .btn {
     display: inline-block; padding: 0.5rem 0.9rem; border-radius: 6px;

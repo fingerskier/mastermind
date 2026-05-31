@@ -10,10 +10,25 @@ describe('help route load', () => {
   it('exposes the installable CLI adapters', () => {
     const data = run();
     const ids = data.adapters.map((a) => a.id).sort();
-    expect(ids).toEqual(['cli:claude', 'cli:codex', 'cli:gemini', 'cli:grok']);
+    expect(ids).toEqual([
+      'cli:aider',
+      'cli:claude',
+      'cli:codex',
+      'cli:gemini',
+      'cli:grok',
+      'cli:qwen'
+    ]);
     for (const a of data.adapters) {
       expect(a.install).toBeTruthy();
       expect(a.docsUrl).toMatch(/^https:\/\//);
+    }
+  });
+
+  it('surfaces a trust/auth caveat for the directory-scoped CLIs', () => {
+    const data = run();
+    const byId = new Map(data.adapters.map((a) => [a.id, a]));
+    for (const id of ['cli:codex', 'cli:gemini', 'cli:qwen']) {
+      expect(byId.get(id)?.caveat).toMatch(/trust|auth/i);
     }
   });
 

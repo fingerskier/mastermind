@@ -27,6 +27,22 @@ const REGISTRY: Record<string, CliAdapterConfig> = {
     args: () => [],
     stdinMode: 'pipe'
   },
+  'cli:qwen': {
+    id: 'cli:qwen',
+    command: 'qwen',
+    // Qwen Code is a Gemini CLI fork; like gemini it reads the prompt from
+    // stdin and runs non-interactively when stdin is not a TTY.
+    args: () => [],
+    stdinMode: 'pipe'
+  },
+  'cli:aider': {
+    id: 'cli:aider',
+    command: 'aider',
+    // Aider runs one headless turn with `--message <PROMPT>` and exits.
+    // `--yes` auto-confirms prompts so the run never blocks waiting on input.
+    args: (prompt) => ['--message', prompt, '--yes'],
+    stdinMode: 'arg'
+  },
   'cli:grok': {
     id: 'cli:grok',
     command: 'grok',

@@ -23,6 +23,22 @@ describe('cli adapter configs', () => {
     expect(cfg!.stdinMode).toBe('pipe');
   });
 
+  it('qwen adapter pipes the prompt via stdin (Gemini CLI fork)', () => {
+    const cfg = getCliConfig('cli:qwen');
+    expect(cfg).not.toBeNull();
+    expect(cfg!.command).toBe('qwen');
+    expect(cfg!.stdinMode).toBe('pipe');
+    expect(cfg!.args('hi')).toEqual([]);
+  });
+
+  it('aider adapter runs a single headless message and auto-confirms', () => {
+    const cfg = getCliConfig('cli:aider');
+    expect(cfg).not.toBeNull();
+    expect(cfg!.command).toBe('aider');
+    expect(cfg!.stdinMode).toBe('arg');
+    expect(cfg!.args('hello world')).toEqual(['--message', 'hello world', '--yes']);
+  });
+
   it('grok CLI runs single-turn headless via --single (official xAI CLI)', () => {
     const cfg = getCliConfig('cli:grok');
     expect(cfg).not.toBeNull();

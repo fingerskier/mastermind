@@ -64,10 +64,16 @@ The bridge between a councillor and an actual model invocation. v1 supports two 
 | `cli:claude` | Spawns `claude -p <prompt>` as a subprocess, captures stdout. |
 | `cli:codex` | Spawns `codex exec <prompt>` as a subprocess, captures stdout. |
 | `cli:gemini` | Spawns `gemini` (Gemini CLI) in headless mode, pipes the prompt via stdin, captures stdout. |
+| `cli:qwen` | Spawns `qwen` (Qwen Code, a Gemini CLI fork) in headless mode, pipes the prompt via stdin, captures stdout. |
+| `cli:aider` | Spawns `aider --message <prompt> --yes` (Aider) for one headless turn, captures stdout. |
 | `cli:grok` | Spawns `grok --prompt <prompt>` (xAI Grok CLI) in headless mode, captures stdout. |
 | *(empty)* | The councillor cannot be run. Jobs assigned to them stay queued until the adapter is set. |
 
 CLI adapters inherit the user's environment (so auth set up outside Landsraad just works). They run with `cwd` set to the council directory so the CLI can read memory files relative to a known root.
+
+Some CLIs need a one-time interactive run before they work headlessly: **Codex**, **Gemini**, and **Qwen** establish trust/auth per working directory, so run them once from the council folder first. **Grok** is brand-new official xAI tooling with no stable npm package yet (see <https://x.ai/cli>). **Aider** needs a model API key env var, treats the council folder as a git repo, and may auto-commit edits. The help page surfaces these as per-adapter "Heads up" notes.
+
+> **Not an adapter:** [VibeCLI](https://github.com/andrewmd/vibecli) is a one-line installer/launcher for other agents (Claude, Codex, Gemini, Qwen, …), not an agent that takes a prompt and streams a response, so it does not fit the `Adapter` contract. Use it to install the CLIs above, then pick the matching adapter.
 
 A future SDK adapter family (`sdk:anthropic`, `sdk:openai`) will use the same `Adapter` interface and slot in without breaking the job runner.
 
