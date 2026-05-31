@@ -131,6 +131,17 @@ Honors `LANDSRAAD_COUNCIL_ROOT` (so `LANDSRAAD_COUNCIL_ROOT=./dogfood npm run re
 
 When you run `npx landsraad`, the server opens your default browser to the council URL once it's listening. Set `PORT` to override the starting port.
 
+### Per-council `.env` (Settings page)
+
+A council can carry its own `.env` file at the council root for adapter API keys
+(`OPENAI_API_KEY`, `WARP_API_KEY`, …) and other env overrides. Edit it in-app on
+the **Settings** page (hamburger menu → Settings): key/value rows with masked
+values. Saving writes `<councilRoot>/.env` and adds `.env` to the council's
+`.gitignore`. The file is loaded into the server environment at startup and
+inherited by adapter subprocesses — **changes take effect after you restart
+Landsraad.** The council `.env` is authoritative (it overrides any inherited
+value) and is never indexed, exported, or served.
+
 ## Running instance registry
 
 `GET /api/instances` returns the live set of running Landsraad processes on this machine:

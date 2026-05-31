@@ -1,7 +1,7 @@
 # Per-council `.env` editor
 
 Date: 2026-05-31
-Status: approved design (pre-implementation)
+Status: implemented (2026-05-31)
 
 ## Problem
 

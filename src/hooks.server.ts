@@ -3,6 +3,15 @@ import type { Handle } from '@sveltejs/kit';
 import { xenovaEmbedder } from '$lib/server/embedder-xenova';
 import { setEmbedder } from '$lib/server/indexer';
 import { startScheduler, stopScheduler } from '$lib/server/scheduler';
+import { loadCouncilEnvIntoProcess } from '$lib/server/env-file';
+
+// Load the council's .env into process.env before the scheduler starts and
+// before any adapter subprocess spawns, so child CLIs inherit the keys.
+try {
+  loadCouncilEnvIntoProcess();
+} catch (err) {
+  console.warn('[landsraad] council .env load failed:', (err as Error).message);
+}
 
 if (env.LANDSRAAD_EMBED !== '0') {
   try {

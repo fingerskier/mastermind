@@ -17,6 +17,10 @@ export function councilFile(): string {
   return join(councilRoot(), 'council.json');
 }
 
+export function councilEnvFile(): string {
+  return join(councilRoot(), '.env');
+}
+
 export function councillorsRoot(): string {
   return join(councilRoot(), 'councillors');
 }

@@ -73,6 +73,8 @@ The bridge between a councillor and an actual model invocation. v1 supports two 
 
 CLI adapters inherit the user's environment (so auth set up outside Landsraad just works). They run with `cwd` set to the council directory so the CLI can read memory files relative to a known root.
 
+A council may carry a root `.env` file (`<councilRoot>/.env`) whose keys are loaded into the server environment at startup and inherited by adapter subprocesses — the in-app way to provide adapter API keys (`OPENAI_API_KEY`, `WARP_API_KEY`, …) and env-driven overrides. Edited at `/settings`. The council `.env` is authoritative (it overrides inherited values), changes take effect on restart, and it is never indexed, exported, or served — `ensureCouncilGitignore` keeps it out of git too.
+
 A future SDK adapter family (`sdk:anthropic`, `sdk:openai`) will use the same `Adapter` interface and slot in without breaking the job runner.
 
 ### Job
@@ -245,8 +247,9 @@ The app never writes outside the council root. It never writes secrets to disk. 
 | `/meetings` | List meetings with status + round + turn count |
 | `/meetings/new` | Convene a meeting: title, topic, chair, attendees, window_k |
 | `/meetings/[id]` | Meeting detail: live transcript, director speak/skip, end / cancel / resume |
+| `/settings` | Edit the council's `.env` (key/value rows, masked values) — adapter API keys and env overrides. Changes take effect on restart. |
 
-A persistent header links back to `/`; the council home is the working surface.
+A persistent header links back to `/` via the brand; the system links (Meetings, Schedules, Install template, Export, Settings, Help) live in a hamburger menu. The council home is the working surface.
 
 ## Out of Scope (will be specified later)
 

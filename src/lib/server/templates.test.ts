@@ -208,6 +208,7 @@ import { readNote, listNotes as listN } from './memory';
 import { listJobs as listJ } from './jobs';
 import { applyTemplate, TemplateNeedsConfirmation } from './templates';
 import { exportSelection } from './templates';
+import { writeCouncilEnv } from './env-file';
 import { slugify } from './paths';
 
 describe('applyTemplate (empty cwd)', () => {
@@ -384,5 +385,18 @@ describe('exportSelection', () => {
     } finally {
       rmSync(freshRoot, { recursive: true, force: true });
     }
+  });
+
+  it('never leaks a council .env secret into the export bundle', async () => {
+    const SECRET = 'sk-super-secret-do-not-leak';
+    await writeCouncilEnv([{ key: 'OPENAI_API_KEY', value: SECRET }]);
+    const exported = await exportSelection({
+      council: { name: 'Exported', version: '0.1.0' },
+      councillor_slugs: ['mocky', 'polly'],
+      memory_slugs: ['house-rules'],
+      sample_job_ids: []
+    });
+    expect(JSON.stringify(exported)).not.toContain(SECRET);
+    expect(JSON.stringify(exported)).not.toContain('OPENAI_API_KEY');
   });
 });
