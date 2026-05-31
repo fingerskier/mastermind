@@ -27,7 +27,10 @@ Notes for AI agents (and humans) working on this codebase.
 
 ## Out of scope (for now)
 
-Agent execution, jobs, runs, scheduler, memory, retrieval, adapters. Do not add them as scope creep — they need their own spec pass.
+Provider-native **SDK adapters** (`sdk:anthropic`, `sdk:openai`, …). v1 invokes
+models only as CLI subprocesses; SDK adapters need their own spec pass. Don't add
+them as scope creep. (Agent execution, jobs, runs, scheduler, memory, retrieval,
+and CLI adapters are all shipped — see `SPECIFICATION.md`.)
 
 ## Git
 
