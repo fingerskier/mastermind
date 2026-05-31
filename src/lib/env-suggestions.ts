@@ -9,6 +9,13 @@
 export interface EnvKeySuggestion {
   key: string;
   description: string;
+  /**
+   * Known acceptable values, when the key takes one of a small set (e.g. the
+   * `lite`/`medium`/`heavy` tiers). The settings editor offers these in a
+   * `<select>` plus a `Custom…` escape hatch for other values. Omit for
+   * free-form keys (API keys, numeric timeouts, prose nudges).
+   */
+  values?: string[];
 }
 
 export const ENV_KEY_SUGGESTIONS: EnvKeySuggestion[] = [
@@ -30,7 +37,8 @@ export const ENV_KEY_SUGGESTIONS: EnvKeySuggestion[] = [
   {
     key: 'LANDSRAAD_MEETING_MODEL',
     description:
-      'Model for all meeting turns. Use a tier — "lite"/"medium"/"heavy" — mapped per adapter, or a literal model id. A councillor ?model= pin still wins.'
+      'Model for all meeting turns. Use a tier — "lite"/"medium"/"heavy" — mapped per adapter, or a literal model id. A councillor ?model= pin still wins.',
+    values: ['lite', 'medium', 'heavy']
   },
   { key: 'LANDSRAAD_MEETING_WINDOW_K', description: 'Recent turns shown per meeting turn (default 4)' },
   {
@@ -46,3 +54,22 @@ export const ENV_KEY_SUGGESTIONS: EnvKeySuggestion[] = [
     description: 'Cross-council peer discovery timeout in ms (default 2000)'
   }
 ];
+
+/** Look up a suggestion by exact key (trimmed). Undefined for unknown keys. */
+export function findEnvSuggestion(key: string): EnvKeySuggestion | undefined {
+  const k = key.trim();
+  if (!k) return undefined;
+  return ENV_KEY_SUGGESTIONS.find((s) => s.key === k);
+}
+
+/**
+ * Whether the value editor should open in free-text ("custom") mode rather than
+ * the enum `<select>`. True only when the key has known `values` and the current
+ * value is a non-empty literal outside that set — e.g. a model id loaded from a
+ * `.env` that predates the tier aliases. A blank value uses the select.
+ */
+export function startsInCustomMode(value: string, values: string[] | undefined): boolean {
+  if (!values || values.length === 0) return false;
+  if (!value) return false;
+  return !values.includes(value);
+}
