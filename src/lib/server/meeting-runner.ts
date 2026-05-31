@@ -260,6 +260,15 @@ export async function advance(id: string): Promise<void> {
       });
 
       if (controller.signal.aborted) {
+        // The host cancelled/ended the meeting while this remote turn was in flight.
+        // It is intentionally NOT re-queued (cancel/end is terminal), but record it so
+        // the timeline shows the remote summon was dropped rather than silently vanishing.
+        await appendMeetingEvent(id, {
+          at: new Date().toISOString(),
+          type: 'turn_failed',
+          speaker: speakerSlug,
+          message: 'aborted after remote summon'
+        });
         return;
       }
 

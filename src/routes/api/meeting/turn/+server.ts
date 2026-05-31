@@ -69,8 +69,17 @@ export const POST: RequestHandler = async ({ request, getClientAddress }) => {
       adapter,
       prompt,
       cwd: councilRoot(),
-      timeoutMs: MEETING_TURN_TIMEOUT_MS
+      timeoutMs: MEETING_TURN_TIMEOUT_MS,
+      // If the summoning host cancels/ends the meeting it drops this connection;
+      // request.signal then aborts so we stop burning tokens on a turn no one will read.
+      abortSignal: request.signal
     });
+
+    if (result.aborted) {
+      // The caller is gone — skip the participation log (the turn produced nothing
+      // usable) and return a best-effort failure that no one is likely listening for.
+      return json({ ok: false, exit_code: result.exit_code, detail: 'aborted' }, { status: 200 });
+    }
 
     await appendIncomingParticipation({
       ts: new Date().toISOString(),

@@ -22,6 +22,23 @@ function event(body: unknown, addr = '127.0.0.1'): Ev {
 
 const ctx = { title: 'Sync', topic: 't', summary: '', recent_turns: [], speaker_instruction: 'You are leto. Speak now.' };
 
+// Simulates the summoning host dropping the connection: a real Request supplies the
+// (already-buffered) body, while a separate, pre-aborted signal stands in for the
+// disconnect that SvelteKit surfaces via request.signal.
+function abortedEvent(body: unknown): Ev {
+  const ac = new AbortController();
+  ac.abort();
+  const real = new Request('http://127.0.0.1/api/meeting/turn', {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify(body)
+  });
+  return {
+    request: { json: () => real.json(), signal: ac.signal },
+    getClientAddress: () => '127.0.0.1'
+  } as unknown as Ev;
+}
+
 describe('POST /api/meeting/turn', () => {
   beforeEach(async () => {
     process.env.LANDSRAAD_COUNCIL_ROOT = mkdtempSync(join(tmpdir(), 'landsraad-turn-'));
@@ -52,6 +69,17 @@ describe('POST /api/meeting/turn', () => {
     const rows = await readIncomingParticipation();
     expect(rows).toHaveLength(1);
     expect(rows[0]).toMatchObject({ host_council: 'eng', councillor_slug: 'leto', exit_code: 0 });
+  });
+
+  it('aborts the adapter and skips the participation log when the caller has disconnected', async () => {
+    const { current } = await import('$lib/server/councillor-lock');
+    const res = await POST(abortedEvent({ meeting_id: 'm1', host_council: 'eng', councillor_slug: 'leto', context: ctx }));
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body.ok).toBe(false);
+    expect(body.detail).toBe('aborted');
+    expect(current('leto')).toBeNull(); // lock released even on abort
+    expect(await readIncomingParticipation()).toHaveLength(0); // wasted turn not recorded
   });
 
   it('returns 409 when the councillor is already held', async () => {
