@@ -1,5 +1,6 @@
 <script lang="ts">
   import { untrack } from 'svelte';
+  import { ENV_KEY_SUGGESTIONS } from '$lib/env-suggestions';
   import type { ActionData, PageData } from './$types';
 
   let { data, form }: { data: PageData; form: ActionData } = $props();
@@ -30,6 +31,12 @@
   <strong>Changes take effect after restarting Landsraad.</strong>
 </p>
 
+<datalist id="env-key-suggestions">
+  {#each ENV_KEY_SUGGESTIONS as s (s.key)}
+    <option value={s.key} label={s.description}></option>
+  {/each}
+</datalist>
+
 <form method="POST" class="form">
   {#if form && 'error' in form && form.error}<div class="error">{form.error}</div>{/if}
   {#if form && 'saved' in form && form.saved}<div class="saved">Saved.</div>{/if}
@@ -37,7 +44,15 @@
   <div class="rows">
     {#each rows as row, i (i)}
       <div class="row">
-        <input name="key" placeholder="KEY" bind:value={row.key} autocomplete="off" spellcheck="false" />
+        <input
+          name="key"
+          placeholder="KEY"
+          list="env-key-suggestions"
+          bind:value={row.key}
+          autocomplete="off"
+          autocapitalize="off"
+          spellcheck="false"
+        />
         <input
           name="value"
           placeholder="value"

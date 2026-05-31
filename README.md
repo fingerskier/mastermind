@@ -136,7 +136,9 @@ When you run `npx landsraad`, the server opens your default browser to the counc
 A council can carry its own `.env` file at the council root for adapter API keys
 (`OPENAI_API_KEY`, `WARP_API_KEY`, …) and other env overrides. Edit it in-app on
 the **Settings** page (hamburger menu → Settings): key/value rows with masked
-values. Saving writes `<councilRoot>/.env` and adds `.env` to the council's
+values. The key field autocompletes from a list of expected names — provider
+API keys (`ANTHROPIC_API_KEY`, `OPENAI_API_KEY`, `XAI_API_KEY`, …) and
+Landsraad's own behavior globals (`LANDSRAAD_MEETING_TURN_NUDGE`, …). Saving writes `<councilRoot>/.env` and adds `.env` to the council's
 `.gitignore`. The file is loaded into the server environment at startup and
 inherited by adapter subprocesses — **changes take effect after you restart
 Landsraad.** The council `.env` is authoritative (it overrides any inherited
