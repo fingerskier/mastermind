@@ -232,7 +232,7 @@ The app never writes outside the council root. It never writes secrets to disk. 
 | Route | Purpose |
 |---|---|
 | `/` | Setup form (no `council.json`, blank-create or install-template) or council home (metadata · councillors · activity · jobs · memory · pending-proposal badge) |
-| `/edit` | Edit council |
+| `/council` | Council administration: rename/template, councillors (add / edit / delete), `.env` editor, export, delete-council |
 | `/councillors/new` | Add councillor |
 | `/councillors/[c-slug]` | View councillor + their jobs + private memory |
 | `/councillors/[c-slug]/edit` | Edit councillor |
@@ -251,9 +251,8 @@ The app never writes outside the council root. It never writes secrets to disk. 
 | `/meetings` | List meetings with status + round + turn count |
 | `/meetings/new` | Convene a meeting: title, topic, chair, attendees, window_k |
 | `/meetings/[id]` | Meeting detail: live transcript, director speak/skip, end / cancel / resume |
-| `/settings` | Edit the council's `.env` (key/value rows, masked values) — adapter API keys and env overrides. Changes take effect on restart. |
 
-A persistent header links back to `/` via the brand; the system links (Meetings, Schedules, Install template, Export, Settings, Help) live in a hamburger menu. The council home is the working surface.
+A persistent header links back to `/` via the brand; the system links (Meetings, Schedules, Install template, Export, Council, Help) live in a hamburger menu. The council home is the working surface.
 
 ## Out of Scope (will be specified later)
 
