@@ -84,10 +84,7 @@
       </p>
     </div>
     <div class="head-actions">
-      <a class="btn" href="/edit">Edit</a>
-      <form method="POST" action="?/delete" onsubmit={(e) => { if (!confirm(`Delete council "${c.name}"? This removes council.json, councillors/, memory/, jobs/, .index/ from this directory.`)) e.preventDefault(); }}>
-        <button class="btn danger" type="submit">Delete</button>
-      </form>
+      <a class="btn" href="/council">Council settings</a>
     </div>
   </header>
 
@@ -116,7 +113,6 @@
       <h2>Councillors</h2>
       <div class="head-actions">
         <a class="btn" href="/jobs/new?for=__all__">+ Create job for all</a>
-        <a class="btn primary" href="/councillors/new">+ New councillor</a>
       </div>
     </div>
 

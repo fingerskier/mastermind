@@ -1,7 +1,6 @@
 import { fail } from '@sveltejs/kit';
 import {
   createCouncil,
-  deleteCouncilData,
   hasCouncil,
   readCouncilWithCouncillors
 } from '$lib/server/councils';
@@ -68,14 +67,5 @@ export const actions: Actions = {
       return fail(400, { name, description, error: message });
     }
     return { created: true };
-  },
-  delete: async () => {
-    try {
-      await deleteCouncilData();
-    } catch (err) {
-      const message = err instanceof Error ? err.message : 'Failed to delete council data.';
-      return fail(500, { error: message });
-    }
-    return { deleted: true };
   }
 };
