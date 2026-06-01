@@ -36,7 +36,7 @@
           <a href="/schedules">Schedules</a>
           <a href="/import">Install template</a>
           <a href="/export">Export…</a>
-          <a href="/settings">Settings</a>
+          <a href="/council">Council</a>
         {/if}
         <a href="/help">Help</a>
       </nav>

@@ -5,7 +5,7 @@
   const initialAdapter = $derived(form?.adapter ?? '');
 </script>
 
-<p><a href="/">&larr; Back to council</a></p>
+<p><a href="/council">&larr; Back to council</a></p>
 <h1>New councillor</h1>
 
 <form method="POST" class="form">
@@ -45,7 +45,7 @@
 
   <div class="actions">
     <button type="submit" class="btn primary">Create councillor</button>
-    <a href="/" class="btn">Cancel</a>
+    <a href="/council" class="btn">Cancel</a>
   </div>
 </form>
 

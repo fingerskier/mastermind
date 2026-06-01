@@ -71,7 +71,7 @@
 
     <div class="actions">
       <button type="submit" class="btn primary">Download template JSON</button>
-      <a href="/" class="btn">Cancel</a>
+      <a href="/council" class="btn">Cancel</a>
     </div>
   </form>
 </section>
