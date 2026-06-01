@@ -1,0 +1,191 @@
+/* Landsraad design tokens + base styles.
+   The app is a calm local operations console: dark, dense, low-glare,
+   warm parchment accent. One token vocabulary so routes stop drifting. */
+
+:root {
+  /* Surfaces — layered dark slate, lightest = most foreground. */
+  --bg: #0f1115;
+  --surface-1: #15181f;
+  --surface-2: #1a1d24;
+  --surface-3: #20242d;
+
+  /* Text */
+  --fg: #e6e7eb;
+  --muted: #9aa3b2;
+  --faint: #6b7280;
+
+  /* Accent — warm parchment, reserved for primary actions + attention. */
+  --accent: #d6c08c;
+  --accent-ink: #0f1115; /* text on a filled accent surface */
+  --accent-soft: rgba(214, 192, 140, 0.1);
+
+  /* Lines */
+  --border: #2a2f3a;
+  --border-strong: #3a4150;
+
+  /* Semantic status vocabulary — used everywhere, no exceptions. */
+  --danger: #d27272;
+  --danger-soft: rgba(210, 114, 114, 0.14);
+  --ok: #8bb98b;
+  --info: #6aa6ff; /* "running / in progress" — distinct from accent actions */
+  --info-soft: rgba(106, 166, 255, 0.1);
+  --warn: #e0b562; /* paused / awaiting director */
+
+  --st-queued: var(--muted);
+  --st-running: var(--info);
+  --st-succeeded: var(--ok);
+  --st-failed: var(--danger);
+  --st-cancelled: var(--faint);
+  --st-paused: var(--warn);
+
+  /* Shape + rhythm */
+  --radius-sm: 5px;
+  --radius: 7px;
+  --radius-lg: 10px;
+  --radius-pill: 999px;
+  --shadow-pop: 0 8px 24px rgba(0, 0, 0, 0.4);
+
+  --font-sans: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --font-mono: ui-monospace, "Cascadia Mono", SFMono-Regular, Menlo, Consolas, monospace;
+}
+
+* { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--fg);
+  font-family: var(--font-sans);
+  line-height: 1.5;
+}
+
+a { color: var(--accent); }
+
+button,
+input,
+textarea,
+select {
+  font: inherit;
+  color: inherit;
+}
+
+code,
+kbd {
+  font-family: var(--font-mono);
+}
+
+:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+  border-radius: 3px;
+}
+
+/* Respect reduced-motion globally — any pulsing/spinning indicator opts in
+   via animation, and this kills it for users who asked for stillness. */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+  }
+}
+
+@keyframes ls-pulse {
+  50% { opacity: 0.3; }
+}
+
+/* ----- Form fields ----- */
+.field { display: grid; gap: 0.35rem; }
+.field > .label { color: var(--muted); font-size: 0.9em; }
+.field > .hint { color: var(--faint); font-size: 0.82em; }
+.input,
+input.input,
+textarea.input,
+select.input {
+  background: var(--surface-2);
+  color: var(--fg);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 0.55rem 0.7rem;
+  width: 100%;
+}
+.input:focus { outline: 2px solid var(--accent); border-color: var(--accent); }
+
+/* ----- Alerts ----- */
+.alert {
+  padding: 0.6rem 0.85rem;
+  border-radius: var(--radius);
+  border: 1px solid var(--border);
+  font-size: 0.92em;
+}
+.alert.error { background: var(--danger-soft); border-color: var(--danger); color: var(--danger); }
+.alert.ok { background: rgba(139, 185, 139, 0.12); border-color: var(--ok); color: var(--ok); }
+
+/* ----- Monospace block (transcripts, raw output) ----- */
+.block {
+  background: var(--surface-1);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  padding: 0.75rem 1rem;
+  white-space: pre-wrap;
+  word-break: break-word;
+  overflow-wrap: anywhere;
+  overflow-x: auto;
+  max-width: 100%;
+  font-family: var(--font-mono);
+  font-size: 0.9em;
+}
+
+/* ----- Rendered markdown ----- */
+.markdown {
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  padding: 0.75rem 1.25rem;
+  font-size: 0.95em;
+  line-height: 1.55;
+  max-width: 100%;
+  overflow-x: auto;
+  word-break: break-word;
+  overflow-wrap: anywhere;
+}
+.markdown > :first-child { margin-top: 0; }
+.markdown > :last-child { margin-bottom: 0; }
+.markdown h1, .markdown h2, .markdown h3, .markdown h4 { margin: 1em 0 0.4em; line-height: 1.25; }
+.markdown h1 { font-size: 1.3em; }
+.markdown h2 { font-size: 1.15em; }
+.markdown h3 { font-size: 1.05em; }
+.markdown p { margin: 0.5em 0; }
+.markdown ul, .markdown ol { padding-left: 1.4em; margin: 0.5em 0; }
+.markdown li { margin: 0.15em 0; }
+.markdown code {
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  padding: 0.05em 0.35em;
+  font-family: var(--font-mono);
+  font-size: 0.9em;
+  word-break: break-word;
+}
+.markdown pre {
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 0.8rem 1rem;
+  overflow-x: auto;
+  max-width: 100%;
+}
+.markdown pre code { background: transparent; border: 0; padding: 0; white-space: pre; }
+.markdown blockquote {
+  border-left: 3px solid var(--border);
+  color: var(--muted);
+  margin: 0.5em 0;
+  padding: 0.1em 0.9em;
+}
+.markdown a { color: var(--accent); word-break: break-all; }
+.markdown hr { border: 0; border-top: 1px solid var(--border); margin: 1em 0; }
+.markdown img { max-width: 100%; height: auto; }
+.markdown table { display: block; max-width: 100%; overflow-x: auto; border-collapse: collapse; }
+.markdown th, .markdown td { border: 1px solid var(--border); padding: 0.3em 0.6em; }
