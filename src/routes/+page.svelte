@@ -265,7 +265,6 @@
 
   .btn { display: inline-block; padding: 0.5rem 0.9rem; border-radius: 6px; border: 1px solid var(--border); text-decoration: none; color: var(--fg); background: transparent; cursor: pointer; }
   .btn.primary { background: var(--accent); color: #0f1115; border-color: var(--accent); font-weight: 600; }
-  .btn.danger { border-color: var(--danger); color: var(--danger); }
   .status {
     flex-shrink: 0; display: inline-flex; align-items: center; justify-content: center;
     width: 1.1em; height: 1.1em; font-size: 1em; line-height: 1; font-weight: 700;

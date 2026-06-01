@@ -1,5 +1,5 @@
 /**
- * Suggested env keys for the per-council `.env` editor (`/settings`).
+ * Suggested env keys for the per-council `.env` editor (`/council`).
  *
  * Two groups: provider API keys (the conventional name each platform reads —
  * adapters pick these up from the inherited environment) and Landsraad's own
