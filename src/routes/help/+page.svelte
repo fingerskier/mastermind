@@ -1,12 +1,14 @@
 <script lang="ts">
   import type { PageData } from './$types';
+  import { Button, PageHeader } from '$lib/components';
   let { data }: { data: PageData } = $props();
 </script>
 
 <svelte:head><title>Help — Landsraad</title></svelte:head>
 
-<h1>Help</h1>
-<p class="meta">Landsraad v{data.version}</p>
+<PageHeader title="Help" back="/">
+  {#snippet subtitle()}Landsraad v{data.version}{/snippet}
+</PageHeader>
 
 <section>
   <h2>What is this?</h2>
@@ -20,6 +22,36 @@
     Everything runs on your own computer. No account, no cloud, no tracking. Council files live
     in the folder you launched from.
   </p>
+</section>
+
+<section>
+  <h2>Mental model in 60 seconds</h2>
+  <dl class="glossary">
+    <div class="term">
+      <dt>Council</dt>
+      <dd>The whole chamber for one directory — its councillors, jobs, memory, and settings.</dd>
+    </div>
+    <div class="term">
+      <dt>Councillor</dt>
+      <dd>A named AI agent with a role and a backing model (via an adapter). It does the work.</dd>
+    </div>
+    <div class="term">
+      <dt>Job</dt>
+      <dd>A unit of work handed to a councillor. It queues, runs, and finishes (or fails).</dd>
+    </div>
+    <div class="term">
+      <dt>Memory</dt>
+      <dd>Durable notes a councillor keeps and can draw on across jobs and meetings.</dd>
+    </div>
+    <div class="term">
+      <dt>Proposal</dt>
+      <dd>A suggested change a councillor surfaces for you to review before it&rsquo;s applied.</dd>
+    </div>
+    <div class="term">
+      <dt>Meeting</dt>
+      <dd>A session where councillors confer — pooling context to produce a shared result.</dd>
+    </div>
+  </dl>
 </section>
 
 <section>
@@ -49,9 +81,9 @@
           <code class="aid">{a.id}</code>
         </div>
         {#if a.blurb}<p class="blurb">{a.blurb}</p>{/if}
-        <p class="field"><span class="k">Install</span> <code>{a.install}</code></p>
-        <p class="field"><span class="k">Command</span> <code>{a.command}</code> must be on your <code>PATH</code></p>
-        <p class="field"><span class="k">Docs</span> <a href={a.docsUrl} target="_blank" rel="noopener noreferrer">{a.docsUrl}</a></p>
+        <p class="afield"><span class="k">Install</span> <code>{a.install}</code></p>
+        <p class="afield"><span class="k">Command</span> <code>{a.command}</code> must be on your <code>PATH</code></p>
+        <p class="afield"><span class="k">Docs</span> <a href={a.docsUrl} target="_blank" rel="noopener noreferrer">{a.docsUrl}</a></p>
       </div>
     {/each}
   </div>
@@ -62,10 +94,43 @@
   </p>
 </section>
 
-<p><a class="btn" href="/">&larr; Back home</a></p>
+<section>
+  <h2>Troubleshooting</h2>
+  <dl class="glossary">
+    <div class="term">
+      <dt>Command not found / missing</dt>
+      <dd>
+        The adapter&rsquo;s CLI isn&rsquo;t on your <code>PATH</code>. Install it (see Adapters above),
+        then open a <em>fresh</em> terminal and run the command on its own to confirm it resolves.
+      </dd>
+    </div>
+    <div class="term">
+      <dt>Not logged in</dt>
+      <dd>
+        The CLI is installed but unauthenticated. Run it directly once to complete its sign-in flow,
+        then retry the job.
+      </dd>
+    </div>
+    <div class="term">
+      <dt>API key missing</dt>
+      <dd>
+        The tool needs a key in its own environment. Set the key the way that CLI expects (its docs
+        link is in the Adapters section), confirm it works standalone, then re-run.
+      </dd>
+    </div>
+    <div class="term">
+      <dt>Timeout</dt>
+      <dd>
+        The adapter took too long to respond. Check your network and that the underlying service is
+        reachable, then retry the job; long prompts can also push past the limit.
+      </dd>
+    </div>
+  </dl>
+</section>
+
+<p class="back-home"><Button href="/">← Back home</Button></p>
 
 <style>
-  h1 { margin: 0; }
   .meta { color: var(--muted); font-size: 0.9em; }
   section { margin-top: 2rem; }
   h2 { margin: 0 0 0.75rem; }
@@ -73,21 +138,32 @@
   p { margin: 0.5rem 0; }
   .steps { display: grid; gap: 0.4rem; padding-left: 1.2rem; }
   code {
-    background: #1a1d24; border: 1px solid var(--border);
+    background: var(--surface-2); border: 1px solid var(--border);
     border-radius: 4px; padding: 0.1rem 0.35rem; font-size: 0.9em;
   }
+  .glossary { display: grid; gap: 0.6rem; margin: 0; }
+  .term {
+    display: grid;
+    grid-template-columns: 9rem 1fr;
+    gap: 0.5rem 1rem;
+    align-items: baseline;
+    border-bottom: 1px solid var(--border);
+    padding-bottom: 0.5rem;
+  }
+  .term:last-child { border-bottom: 0; padding-bottom: 0; }
+  dt { font-weight: 600; color: var(--fg); }
+  dd { margin: 0; color: var(--muted); }
   .adapters { display: grid; gap: 1rem; margin-top: 1rem; }
-  .adapter { border: 1px solid var(--border); border-radius: 8px; padding: 1rem 1.1rem; }
+  .adapter { border: 1px solid var(--border); border-radius: var(--radius-lg); padding: 1rem 1.1rem; background: var(--surface-1); }
   .adapter-head { display: flex; justify-content: space-between; align-items: baseline; gap: 0.5rem; }
   .aid { color: var(--muted); }
   .blurb { color: var(--fg); }
-  .field { font-size: 0.95em; }
-  .field .k { display: inline-block; min-width: 4.5rem; color: var(--muted); font-size: 0.85em; }
-  .field a { word-break: break-all; }
+  .afield { font-size: 0.95em; }
+  .afield .k { display: inline-block; min-width: 4.5rem; color: var(--muted); font-size: 0.85em; }
+  .afield a { word-break: break-all; }
   .tip { margin-top: 1rem; }
-  .btn {
-    display: inline-block; padding: 0.5rem 0.9rem; border-radius: 6px;
-    border: 1px solid var(--border); text-decoration: none; color: var(--fg);
+  .back-home { margin-top: 2rem; }
+  @media (max-width: 480px) {
+    .term { grid-template-columns: 1fr; gap: 0.15rem; }
   }
-  .btn:hover { border-color: var(--accent); }
 </style>

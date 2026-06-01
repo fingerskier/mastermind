@@ -16,8 +16,14 @@ export const load: PageServerLoad = async () => {
   };
   for (const j of jobs) counts[j.status]++;
 
+  // Counts above cover every job; the feed itself shows the most recent slice
+  // so the page stays light when history grows large.
+  const MAX_FEED = 200;
+  const shown = jobs.slice(0, MAX_FEED);
+
   return {
-    jobs: jobs.map((j) => ({
+    truncated: jobs.length > MAX_FEED ? jobs.length - MAX_FEED : 0,
+    jobs: shown.map((j) => ({
       id: j.id,
       title: j.title,
       status: j.status,

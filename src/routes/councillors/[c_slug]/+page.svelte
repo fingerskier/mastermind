@@ -1,6 +1,7 @@
 <script lang="ts">
-  import { marked } from 'marked';
   import type { ActionData, PageData } from './$types';
+  import { Button, Badge, Card, PageHeader, EmptyState, Markdown } from '$lib/components';
+  import { relTime } from '$lib/time';
   let { data, form }: { data: PageData; form: ActionData } = $props();
   const c = $derived(data.councillor);
   const adapters = $derived(data.adapters);
@@ -9,9 +10,6 @@
   const currentAdapter = $derived(c.adapter ?? '');
   const isKnown = $derived(currentAdapter === '' || adapters.some((a) => a.id === currentAdapter));
   const currentNote = $derived(adapters.find((a) => a.id === currentAdapter)?.note ?? '');
-  const personaHtml = $derived(
-    c.persona.trim() ? (marked.parse(c.persona, { async: false, gfm: true, breaks: false }) as string) : ''
-  );
 
   let personaOpenedFlash = $state(false);
   $effect(() => {
@@ -23,30 +21,30 @@
   });
 </script>
 
-<p><a href="/">&larr; Back to council</a></p>
-
-<header class="head">
-  <div>
-    <h1>{c.name}</h1>
-    <p class="meta">
-      Role: <strong>{c.role}</strong>
-      · Created {new Date(c.created_at).toLocaleString()}
-    </p>
-  </div>
-  <div class="head-actions">
-    <a class="btn" href="/councillors/{c.slug}/edit">Edit</a>
+<PageHeader title={c.name} back="/" backLabel="Back to council">
+  {#snippet subtitle()}
+    Role: <strong>{c.role}</strong>
+    {#if currentAdapter}· <Badge mono>{currentAdapter}</Badge>{/if}
+    · Created {new Date(c.created_at).toLocaleString()}
+    {#if c.routing_hint}
+      <div class="routing">Routes: {c.routing_hint}</div>
+    {/if}
+  {/snippet}
+  {#snippet actions()}
+    <Button href="/jobs/new?for={c.slug}" variant="primary">+ New job for this councillor</Button>
+    <Button href="/councillors/{c.slug}/edit">Edit</Button>
     <form method="POST" action="?/delete" onsubmit={(e) => { if (!confirm(`Delete councillor "${c.name}"?`)) e.preventDefault(); }}>
-      <button class="btn danger" type="submit">Delete</button>
+      <Button type="submit" variant="danger">Delete</Button>
     </form>
-  </div>
-</header>
+  {/snippet}
+</PageHeader>
 
 <section class="adapter-panel">
   <h2>Adapter</h2>
   <form method="POST" action="?/setAdapter" class="adapter-form">
-    <label>
-      <span class="sr-only">Adapter</span>
-      <select name="adapter">
+    <label class="field adapter-field">
+      <span class="label sr-only">Adapter</span>
+      <select name="adapter" class="input">
         <option value="" selected={currentAdapter === ''}>— none (cannot run jobs) —</option>
         {#if !isKnown}
           <option value={currentAdapter} selected>{currentAdapter} (custom)</option>
@@ -58,25 +56,32 @@
         {/each}
       </select>
     </label>
-    <button class="btn primary" type="submit">Save adapter</button>
+    <Button type="submit" variant="primary">Save adapter</Button>
   </form>
   {#if currentNote}<p class="note">{currentNote}</p>{/if}
-  {#if form?.error}<p class="error">{form.error}</p>{/if}
-  {#if form?.adapterSaved}<p class="saved">Adapter saved.</p>{/if}
+  {#if form?.error}<p class="alert error">{form.error}</p>{/if}
+  {#if form?.adapterSaved}<p class="alert ok">Adapter saved.</p>{/if}
 </section>
 
 <section>
   <div class="section-head">
     <h2>Persona</h2>
     <form method="POST" action="?/openPersona">
-      <button class="btn" type="submit" title="Open persona.md in your default editor">Edit</button>
+      <Button type="submit" title="Open persona.md in your default editor">Edit</Button>
     </form>
   </div>
-  {#if personaOpenedFlash}<p class="saved flash">Opening persona.md in your default editor…</p>{/if}
-  {#if personaHtml}
-    <div class="persona-md">{@html personaHtml}</div>
+  {#if personaOpenedFlash}<p class="alert ok flash">Opening persona.md in your default editor…</p>{/if}
+  {#if c.persona.trim()}
+    <Markdown source={c.persona} />
   {:else}
-    <p class="empty">No persona written yet.</p>
+    <EmptyState
+      icon="✎"
+      text="No persona written yet. The persona shapes how this councillor reasons and responds — write one to give it a voice."
+    >
+      {#snippet action()}
+        <Button href="/councillors/{c.slug}/edit" variant="primary">Write persona</Button>
+      {/snippet}
+    </EmptyState>
   {/if}
 </section>
 
@@ -86,7 +91,10 @@
     <a class="muted-link" href="/proposals">All proposals →</a>
   </div>
   {#if proposals.length === 0}
-    <p class="empty">No pending suggestions for this councillor.</p>
+    <EmptyState
+      icon="◷"
+      text="No pending suggestions for this councillor. Suggested jobs appear here when other jobs propose follow-up work."
+    />
   {:else}
     <ul class="prop-list">
       {#each proposals as p (p.id)}
@@ -96,25 +104,25 @@
               <div class="prop-title">{p.title}</div>
               <div class="prop-meta">
                 from <code>{p.proposed_by}</code>
-                {#if p.target_councillor === 'all'} · <span class="chip">all councillors</span>{/if}
+                {#if p.target_councillor === 'all'} · <Badge>all councillors</Badge>{/if}
                 · priority <code>{p.priority}</code>
                 · source <a href="/jobs/{p.source_job_id}">{p.source_job_id}</a>
               </div>
             </div>
           </div>
-          <pre class="brief">{p.brief}</pre>
+          <pre class="block brief">{p.brief}</pre>
           <div class="actions">
             <form method="POST" action="?/approveProposal" class="approve-form">
               <input type="hidden" name="id" value={p.id} />
               <label class="inline">
                 <input type="checkbox" name="start_now" /> start now
               </label>
-              <button type="submit" class="btn primary">Approve</button>
+              <Button type="submit" variant="primary">Approve</Button>
             </form>
             <form method="POST" action="?/rejectProposal" class="reject-form">
               <input type="hidden" name="id" value={p.id} />
-              <input type="text" name="reason" placeholder="reason (optional)" />
-              <button type="submit" class="btn danger">Reject</button>
+              <input class="input" type="text" name="reason" placeholder="reason (optional)" />
+              <Button type="submit" variant="danger">Reject</Button>
             </form>
           </div>
         </li>
@@ -124,17 +132,20 @@
 </section>
 
 <section>
-  <h2>Memory</h2>
+  <h2>Private memory</h2>
   {#if memories.length === 0}
-    <p class="empty">No memories yet. They accrue automatically after successful jobs.</p>
+    <EmptyState
+      icon="✦"
+      text="No private notes yet. Memory accrues automatically after successful jobs, capturing what this councillor learned."
+    />
   {:else}
     <ul class="mem-list">
       {#each memories as m (m.slug)}
         <li>
-          <a class="mem-card" href="/councillors/{c.slug}/memory/{m.slug}">
+          <Card href="/councillors/{c.slug}/memory/{m.slug}">
             <div class="mem-title">{m.title}</div>
-            <div class="mem-meta">Updated {new Date(m.updated_at).toLocaleString()}</div>
-          </a>
+            <div class="mem-meta">Updated {relTime(m.updated_at)}</div>
+          </Card>
         </li>
       {/each}
     </ul>
@@ -142,24 +153,13 @@
 </section>
 
 <style>
-  h1 { margin: 0; }
-  .meta { color: var(--muted); margin: 0.5rem 0 0; font-size: 0.9em; }
-  .head { display: flex; justify-content: space-between; gap: 1rem; align-items: flex-start; margin-bottom: 2rem; }
-  .head-actions { display: flex; gap: 0.5rem; align-items: center; }
   h2 { margin: 1rem 0 0.5rem; }
-  .empty { color: var(--muted); }
+  .routing { color: var(--muted); font-size: 0.95em; margin-top: 0.25rem; }
   .adapter-panel { margin-bottom: 2rem; }
   .adapter-form { display: flex; gap: 0.5rem; align-items: center; }
-  .adapter-form select {
-    flex: 1; max-width: 360px;
-    background: #1a1d24; color: var(--fg);
-    border: 1px solid var(--border); border-radius: 6px;
-    padding: 0.55rem 0.7rem; font-family: inherit;
-  }
-  .adapter-form select:focus { outline: 2px solid var(--accent); border-color: var(--accent); }
+  .adapter-field { flex: 1; max-width: 360px; }
   .note { color: var(--muted); font-size: 0.85em; margin: 0.5rem 0 0; }
-  .error { color: var(--danger); margin: 0.5rem 0 0; }
-  .saved { color: #8bb98b; margin: 0.5rem 0 0; }
+  .alert { margin: 0.5rem 0 0; display: inline-block; }
   .flash { animation: flash-fade 3s ease-out forwards; }
   @keyframes flash-fade {
     0%, 70% { opacity: 1; }
@@ -172,68 +172,19 @@
   .section-head { display: flex; align-items: center; justify-content: space-between; gap: 1rem; }
   .section-head h2 { margin: 1rem 0 0.5rem; }
   .section-head form { margin: 0; }
-  .persona-md {
-    background: #1a1d24;
-    border: 1px solid var(--border);
-    border-radius: 6px;
-    padding: 0.75rem 1.25rem;
-    font-size: 0.95em;
-    line-height: 1.55;
-  }
-  .persona-md :global(h1),
-  .persona-md :global(h2),
-  .persona-md :global(h3),
-  .persona-md :global(h4) { margin: 1em 0 0.4em; line-height: 1.25; }
-  .persona-md :global(h1) { font-size: 1.4em; }
-  .persona-md :global(h2) { font-size: 1.2em; }
-  .persona-md :global(h3) { font-size: 1.05em; }
-  .persona-md :global(p) { margin: 0.5em 0; }
-  .persona-md :global(ul),
-  .persona-md :global(ol) { padding-left: 1.4em; margin: 0.5em 0; }
-  .persona-md :global(li) { margin: 0.15em 0; }
-  .persona-md :global(code) {
-    background: #0f1115;
-    border: 1px solid var(--border);
-    border-radius: 4px;
-    padding: 0.05em 0.35em;
-    font-family: ui-monospace, "Cascadia Mono", Consolas, monospace;
-    font-size: 0.9em;
-  }
-  .persona-md :global(pre) {
-    background: #0f1115;
-    border: 1px solid var(--border);
-    border-radius: 6px;
-    padding: 0.8rem 1rem;
-    overflow-x: auto;
-  }
-  .persona-md :global(pre code) { background: transparent; border: 0; padding: 0; }
-  .persona-md :global(blockquote) {
-    border-left: 3px solid var(--border);
-    color: var(--muted);
-    margin: 0.5em 0;
-    padding: 0.1em 0.9em;
-  }
-  .persona-md :global(a) { color: var(--accent); }
-  .persona-md :global(hr) { border: 0; border-top: 1px solid var(--border); margin: 1em 0; }
-  .btn { display: inline-block; padding: 0.5rem 0.9rem; border-radius: 6px; border: 1px solid var(--border); text-decoration: none; color: var(--fg); background: transparent; cursor: pointer; }
-  .btn.primary { background: var(--accent); color: #0f1115; border-color: var(--accent); font-weight: 600; }
-  .btn.danger { border-color: var(--danger); color: var(--danger); }
   .mem-list { list-style: none; padding: 0; display: grid; gap: 0.6rem; }
-  .mem-card { display: block; border: 1px solid var(--border); border-radius: 6px; padding: 0.6rem 0.8rem; text-decoration: none; color: var(--fg); }
-  .mem-card:hover { border-color: var(--accent); }
   .mem-title { font-weight: 500; }
   .mem-meta { color: var(--muted); font-size: 0.8em; margin-top: 0.2rem; }
   .muted-link { color: var(--muted); text-decoration: none; font-size: 0.85em; }
   .muted-link:hover { color: var(--accent); }
   .prop-list { list-style: none; padding: 0; display: grid; gap: 0.75rem; }
-  .prop-card { border: 1px solid var(--border); border-radius: 8px; padding: 0.85rem 1rem; display: grid; gap: 0.6rem; }
+  .prop-card { border: 1px solid var(--border); border-radius: var(--radius-lg); padding: 0.85rem 1rem; display: grid; gap: 0.6rem; }
   .prop-head { display: flex; justify-content: space-between; gap: 1rem; align-items: flex-start; }
   .prop-title { font-weight: 600; }
   .prop-meta { color: var(--muted); font-size: 0.85em; margin-top: 0.15rem; }
-  .brief { white-space: pre-wrap; background: rgba(255,255,255,0.02); border: 1px solid var(--border); border-radius: 6px; padding: 0.6rem 0.7rem; margin: 0; font-size: 0.9em; }
+  .brief { margin: 0; }
   .actions { display: flex; flex-wrap: wrap; gap: 1rem; align-items: center; }
   .approve-form, .reject-form { display: flex; gap: 0.5rem; align-items: center; margin: 0; }
   .inline { display: inline-flex; gap: 0.4rem; align-items: center; color: var(--muted); font-size: 0.9em; }
-  .reject-form input[type="text"] { background: #1a1d24; color: var(--fg); border: 1px solid var(--border); border-radius: 6px; padding: 0.4rem 0.6rem; }
-  .chip { font-size: 0.75em; padding: 0.05rem 0.4rem; border-radius: 999px; border: 1px solid var(--border); color: var(--muted); }
+  .reject-form .input { width: auto; }
 </style>

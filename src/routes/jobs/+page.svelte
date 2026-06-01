@@ -67,9 +67,13 @@
       </li>
     {/each}
   </ul>
+  {#if data.truncated > 0 && filter === 'all'}
+    <p class="truncated">Showing the 200 most recent jobs · {data.truncated} older hidden.</p>
+  {/if}
 {/if}
 
 <style>
+  .truncated { color: var(--faint); font-size: 0.85em; margin-top: 1rem; text-align: center; }
   .filters { display: flex; flex-wrap: wrap; gap: 0.4rem; margin-bottom: 1.25rem; }
   .filter {
     display: inline-flex;
