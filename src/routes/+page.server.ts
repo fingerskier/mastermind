@@ -33,22 +33,43 @@ export const load: PageServerLoad = async () => {
   ).length;
   const running = new Set(currentRuns().map((r) => r.councillor));
   const recentByCouncillor: Record<string, Job[]> = {};
-  for (const c of council.councillors) recentByCouncillor[c.slug] = [];
+  const perCouncillor: Record<string, { running: number; queued: number; failed: number }> = {};
+  for (const c of council.councillors) {
+    recentByCouncillor[c.slug] = [];
+    perCouncillor[c.slug] = { running: 0, queued: 0, failed: 0 };
+  }
+  const stats = { running: 0, queued: 0, failed: 0, succeeded: 0 };
   for (const j of jobs) {
+    if (j.status in stats) stats[j.status as keyof typeof stats]++;
+    const pc = perCouncillor[j.councillor_slug];
+    if (pc) {
+      if (j.status === 'running') pc.running++;
+      else if (j.status === 'queued') pc.queued++;
+      else if (j.status === 'failed') pc.failed++;
+    }
     const bucket = recentByCouncillor[j.councillor_slug];
     if (!bucket) continue;
     if (bucket.length < RECENT_JOBS_PER_COUNCILLOR) bucket.push(j);
   }
+
+  // The active meeting (if any) for the command-center strip.
+  const activeMeeting = meetings.find((m) => !['ended', 'cancelled', 'failed'].includes(m.status)) ?? null;
+
   return {
     hasCouncil: true as const,
     council,
     notes,
     recentByCouncillor,
+    perCouncillor,
+    stats,
     running: Array.from(running),
     pendingProposalCount: pendingProposals.length,
     schedules,
     meetingsTotal: meetings.length,
-    activeMeetings: activeMeetingsCount
+    activeMeetings: activeMeetingsCount,
+    activeMeeting: activeMeeting
+      ? { id: activeMeeting.id, title: activeMeeting.title, status: activeMeeting.status }
+      : null
   };
 };
 
