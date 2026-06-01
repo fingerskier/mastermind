@@ -1,5 +1,5 @@
 import { error, fail, redirect } from '@sveltejs/kit';
-import { readCouncil } from '$lib/server/councils';
+import { readCouncilWithCouncillors } from '$lib/server/councils';
 import { readJob, readEvents, readInput, readOutput, readTranscript, rerunJob } from '$lib/server/jobs';
 import { listProposalsForSourceJob } from '$lib/server/proposals';
 import { cancelJob, isRunning, startJobInBackground } from '$lib/server/runner';
@@ -8,7 +8,7 @@ import type { Actions, PageServerLoad } from './$types';
 export const load: PageServerLoad = async ({ params }) => {
   try {
     const [council, job, events, input, transcript, output, proposals] = await Promise.all([
-      readCouncil(),
+      readCouncilWithCouncillors(),
       readJob(params.jid),
       readEvents(params.jid),
       readInput(params.jid),
@@ -16,7 +16,18 @@ export const load: PageServerLoad = async ({ params }) => {
       readOutput(params.jid),
       listProposalsForSourceJob(params.jid)
     ]);
-    return { council, job, events, input, transcript, output, proposals };
+    const councillor = council.councillors.find((c) => c.slug === job.councillor_slug) ?? null;
+    return {
+      council,
+      job,
+      events,
+      input,
+      transcript,
+      output,
+      proposals,
+      councillorName: councillor?.name ?? job.councillor_slug,
+      adapter: councillor?.adapter ?? null
+    };
   } catch {
     error(404, 'Job not found');
   }
