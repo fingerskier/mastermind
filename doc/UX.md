@@ -450,3 +450,61 @@ Phase 1 order in the first pass is right. Tightest sequence to start:
 3. Desktop nav with active state + add Jobs/Memory/Proposals entries + count badges.
 4. Reduced-motion guard on the pulse keyframes.
 5. Settle the accent (purge the blue literals in meetings).
+
+---
+
+## Implementation Log (2026-05-31)
+
+All three phases of the plan above were implemented. The design system landed
+first; every route was then migrated onto it.
+
+### Phase 1 — foundation
+
+- **`src/app.css`** (new): design tokens (`:root` CSS variables for surfaces,
+  text, accent `#d6c08c`, semantic status/danger/ok/info/warn, radii, shadow,
+  fonts) + global classes (`.field`/`.label`/`.hint`, `.input`, `.alert[.error|.ok]`,
+  `.block`, `.markdown`) + a global `prefers-reduced-motion` guard and the shared
+  `ls-pulse` keyframe. Imported once in the root layout.
+- **`src/lib/components/`** (new): `Button`, `Badge`, `StatusBadge` (glyph +
+  text + color, job & meeting vocab), `Card`, `PageHeader`, `EmptyState`,
+  `Markdown`, barrel `index.ts`. Plus `src/lib/time.ts` `relTime()`.
+- **Navigation**: root layout rebuilt with a desktop nav bar — active-route
+  state + `aria-current`, count badges (running / meetings / proposals), a
+  persistent **+ New job**, and Activity / Memory / Proposals now first-class
+  entries. Hamburger demoted to utilities.
+- **Meeting detail**: raw `<button>` controls restyled via `Button`; blue accent
+  literals purged to `--info` tokens; markdown via the `Markdown` component.
+- Reduced-motion is now globally honored; accent settled to the parchment token.
+
+### Phase 2 — core loop
+
+- **Home**: command-center status strip, councillor swimlanes with busy/ready +
+  queued/failed counts, recent shared memory, and a **first-run onboarding
+  checklist** (add councillor → connect adapter → first job).
+- **Activity feed** (`/jobs`): new route — status filter tabs with counts,
+  2s live refresh, truncation cap.
+- **Job detail** (`/jobs/[jid]`): sticky status cockpit (StatusBadge,
+  councillor + adapter, created/started/finished rel-times, exit code, live
+  indicator), **tabbed artifacts** (Output / Transcript / Prompt / Events /
+  Memories / Suggested jobs) that only appear when populated, live transcript
+  tail while running, and a **failure-recovery panel** for failed jobs.
+- **New job** (`/jobs/new`): segmented Run-now / Schedule control, multi-
+  councillor preview with adapter badges, cron presets.
+- **Proposals**: review inbox with status filter tabs + counts, Markdown
+  briefs, stronger approve/reject hierarchy.
+
+### Phase 3 — power-user surfaces
+
+- **Schedules** (list / new / [id] / edit): builder with cron presets, next-fire
+  preview on detail, Card list, timezone note.
+- **Council**: sectioned settings (Identity / Councillors / Environment /
+  Import-Export / Danger zone) with per-councillor adapter health.
+- **Memory** index + editors: Edit/Preview toggle with `Markdown` preview.
+
+### Verification
+
+`npm run check` → 0 errors (remaining warnings are accepted editable-buffer
+`state_referenced_locally` seeds). `npm test` → 359 passing (one runner
+cancel test is a load-dependent timing flake; passes in isolation). All
+user-facing routes smoke-tested under `npm run dev` (HTTP 200), including
+dynamically-created schedule detail/edit.
