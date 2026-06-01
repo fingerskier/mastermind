@@ -57,6 +57,43 @@
     </div>
   </header>
 
+  {#if !data.onboarding.jobs}
+    {@const ob = data.onboarding}
+    {@const adapterHref = ob.firstCouncillorSlug ? `/councillors/${ob.firstCouncillorSlug}` : '/councillors/new'}
+    <section class="onboard" aria-label="Getting started">
+      <div class="onboard-head">
+        <h2>Get this council running</h2>
+        <p>Three steps from empty to your first job.</p>
+      </div>
+      <ol class="steps">
+        <li class="step" class:done={ob.councillors} class:active={!ob.councillors}>
+          <span class="tick" aria-hidden="true">{ob.councillors ? '✓' : '1'}</span>
+          <div class="step-body">
+            <div class="step-title">Add a councillor</div>
+            <div class="step-hint">Councillors are the AI workers that run jobs.</div>
+          </div>
+          {#if !ob.councillors}<Button href="/councillors/new" variant="primary">Add councillor</Button>{/if}
+        </li>
+        <li class="step" class:done={ob.adapter} class:active={ob.councillors && !ob.adapter} class:locked={!ob.councillors}>
+          <span class="tick" aria-hidden="true">{ob.adapter ? '✓' : '2'}</span>
+          <div class="step-body">
+            <div class="step-title">Connect an adapter</div>
+            <div class="step-hint">Point a councillor at a model CLI so it can think.</div>
+          </div>
+          {#if ob.councillors && !ob.adapter}<Button href={adapterHref} variant="primary">Set adapter</Button>{/if}
+        </li>
+        <li class="step" class:active={ob.adapter} class:locked={!ob.adapter}>
+          <span class="tick" aria-hidden="true">3</span>
+          <div class="step-body">
+            <div class="step-title">Create your first job</div>
+            <div class="step-hint">Hand the council a task and watch it work.</div>
+          </div>
+          {#if ob.adapter}<Button href="/jobs/new" variant="primary">+ New job</Button>{/if}
+        </li>
+      </ol>
+    </section>
+  {/if}
+
   <!-- Command-center: answer "what needs my attention?" first. -->
   <section class="strip" aria-label="System status">
     <a class="stat" class:hot={st.running > 0} href="/jobs">
@@ -190,6 +227,39 @@
   .form { display: grid; gap: 1rem; margin-top: 1rem; }
   .or { color: var(--muted); margin: 1.25rem 0 0.75rem; text-align: center; }
   .actions { display: flex; gap: 0.5rem; }
+
+  /* First-run checklist */
+  .onboard {
+    border: 1px solid var(--accent);
+    border-radius: var(--radius-lg);
+    background: var(--accent-soft);
+    padding: 1.1rem 1.25rem;
+    margin-bottom: 2rem;
+  }
+  .onboard-head h2 { font-size: 1.15rem; }
+  .onboard-head p { color: var(--muted); margin: 0.2rem 0 0; font-size: 0.9em; }
+  .steps { list-style: none; padding: 0; margin: 1rem 0 0; display: grid; gap: 0.5rem; }
+  .step {
+    display: flex; align-items: center; gap: 0.85rem;
+    padding: 0.7rem 0.85rem;
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    background: var(--surface-1);
+  }
+  .step.active { border-color: var(--accent); }
+  .step.locked { opacity: 0.55; }
+  .tick {
+    flex-shrink: 0; width: 1.6rem; height: 1.6rem; border-radius: 50%;
+    display: inline-flex; align-items: center; justify-content: center;
+    border: 1px solid var(--border-strong); color: var(--muted);
+    font-size: 0.85em; font-weight: 600; font-variant-numeric: tabular-nums;
+  }
+  .step.active .tick { border-color: var(--accent); color: var(--accent); }
+  .step.done .tick { border-color: var(--ok); color: var(--accent-ink); background: var(--ok); }
+  .step-body { flex: 1; min-width: 0; }
+  .step-title { font-weight: 600; }
+  .step.done .step-title { color: var(--muted); text-decoration: line-through; }
+  .step-hint { color: var(--muted); font-size: 0.85em; margin-top: 0.1rem; }
 
   /* Status strip */
   .strip {

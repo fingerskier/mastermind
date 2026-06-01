@@ -55,10 +55,20 @@ export const load: PageServerLoad = async () => {
   // The active meeting (if any) for the command-center strip.
   const activeMeeting = meetings.find((m) => !['ended', 'cancelled', 'failed'].includes(m.status)) ?? null;
 
+  // First-run guidance: surfaced until the council has produced its first job.
+  const firstCouncillorSlug = council.councillors[0]?.slug ?? null;
+  const onboarding = {
+    councillors: council.councillors.length > 0,
+    adapter: council.councillors.some((c) => Boolean(c.adapter)),
+    jobs: jobs.length > 0,
+    firstCouncillorSlug
+  };
+
   return {
     hasCouncil: true as const,
     council,
     notes,
+    onboarding,
     recentByCouncillor,
     perCouncillor,
     stats,
