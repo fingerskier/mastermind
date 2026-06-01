@@ -1,7 +1,7 @@
 <script lang="ts">
   import { untrack } from 'svelte';
   import { ENV_KEY_SUGGESTIONS, findEnvSuggestion, startsInCustomMode } from '$lib/env-suggestions';
-  import EnvVarRow, { type Row } from './EnvVarRow.svelte';
+  import EnvVarRow, { type Row } from '../council/EnvVarRow.svelte';
   import type { ActionData, PageData } from './$types';
 
   let { data, form }: { data: PageData; form: ActionData } = $props();
