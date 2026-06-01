@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { Button } from '$lib/components';
   import { findEnvSuggestion, startsInCustomMode } from '$lib/env-suggestions';
 
   export type Row = { key: string; value: string; revealed: boolean; custom: boolean };
@@ -41,6 +42,7 @@
 <div class="row-wrap">
   <div class="row">
     <input
+      class="input"
       name="key"
       placeholder="KEY"
       list="env-key-suggestions"
@@ -51,7 +53,7 @@
     />
 
     {#if useSelect}
-      <select name="value" bind:value={row.value} onchange={onSelectChange}>
+      <select class="input" name="value" bind:value={row.value} onchange={onSelectChange}>
         {#each values! as v (v)}
           <option value={v}>{v}</option>
         {/each}
@@ -59,6 +61,7 @@
       </select>
     {:else}
       <input
+        class="input"
         name="value"
         placeholder="value"
         type={values?.length ? 'text' : row.revealed ? 'text' : 'password'}
@@ -69,19 +72,19 @@
     {/if}
 
     {#if values?.length && row.custom}
-      <button type="button" class="btn icon" title="Use presets" onclick={backToPresets}>↩</button>
+      <Button variant="icon" title="Use presets" ariaLabel="Use presets" onclick={backToPresets}>↩</Button>
     {:else if !values?.length}
-      <button
-        type="button"
-        class="btn icon"
-        title={row.revealed ? 'Hide' : 'Reveal'}
-        onclick={() => (row.revealed = !row.revealed)}>{row.revealed ? '🙈' : '👁'}</button
+      <Button
+        variant="icon"
+        title={row.revealed ? 'Hide value' : 'Reveal value'}
+        ariaLabel={row.revealed ? 'Hide value' : 'Reveal value'}
+        onclick={() => (row.revealed = !row.revealed)}>{row.revealed ? '🙈' : '👁'}</Button
       >
     {:else}
       <span class="spacer"></span>
     {/if}
 
-    <button type="button" class="btn icon" title="Remove" onclick={onremove}>✕</button>
+    <Button variant="icon" title="Remove variable" ariaLabel="Remove variable" onclick={onremove}>✕</Button>
   </div>
   {#if suggestion}
     <p class="help">{suggestion.description}</p>
@@ -91,18 +94,10 @@
 <style>
   .row-wrap { display: grid; gap: 0.25rem; }
   .row { display: grid; grid-template-columns: 1fr 1.5fr auto auto; gap: 0.5rem; align-items: center; }
-  input,
-  select {
-    background: #1a1d24;
-    color: var(--fg);
-    border: 1px solid var(--border);
-    border-radius: 6px;
-    padding: 0.55rem 0.7rem;
-  }
-  input:focus,
-  select:focus { outline: 2px solid var(--accent); border-color: var(--accent); }
-  .spacer { width: 0; }
+  .spacer { width: 2rem; }
   .help { margin: 0 0 0.15rem; color: var(--muted); font-size: 0.8em; }
-  .btn { display: inline-block; padding: 0.5rem 0.9rem; border-radius: 6px; border: 1px solid var(--border); color: var(--fg); background: transparent; cursor: pointer; }
-  .btn.icon { padding: 0.45rem 0.6rem; line-height: 1; }
+
+  @media (max-width: 560px) {
+    .row { grid-template-columns: 1fr 1fr auto auto; }
+  }
 </style>

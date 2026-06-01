@@ -1,81 +1,108 @@
 <script lang="ts">
+  import { PageHeader, Button, Badge, Card, EmptyState } from '$lib/components';
+  import { relTime } from '$lib/time';
   import type { PageData } from './$types';
+
   let { data }: { data: PageData } = $props();
   const items = $derived(data.schedules);
 
-  function fmt(iso: string | null): string {
+  function fmt(iso: string | null | undefined): string {
     if (!iso) return '—';
-    try { return new Date(iso).toLocaleString(); } catch { return iso; }
+    try { return new Date(iso).toLocaleString(); } catch { return String(iso); }
   }
 </script>
 
-<p><a href="/">&larr; Council</a></p>
-
-<header class="head">
-  <h1>Schedules</h1>
-  <a class="btn primary" href="/schedules/new">+ New schedule</a>
-</header>
+<PageHeader title="Schedules" back="/" backLabel="Council">
+  {#snippet subtitle()}{items.length} schedule{items.length === 1 ? '' : 's'}{/snippet}
+  {#snippet actions()}<Button href="/schedules/new" variant="primary">+ New schedule</Button>{/snippet}
+</PageHeader>
 
 {#if items.length === 0}
-  <p class="empty">No schedules yet.</p>
+  <EmptyState
+    icon="◷"
+    text="No schedules yet. Schedule a councillor to run a brief on a cron cadence or at a one-shot time."
+  >
+    {#snippet action()}<Button href="/schedules/new" variant="primary">+ New schedule</Button>{/snippet}
+  </EmptyState>
 {:else}
-  <table class="t">
-    <thead>
-      <tr>
-        <th>Title</th>
-        <th>Councillor</th>
-        <th>Kind</th>
-        <th>When</th>
-        <th>Next fire</th>
-        <th>Fires</th>
-        <th></th>
-      </tr>
-    </thead>
-    <tbody>
-      {#each items as s (s.id)}
-        <tr class={s.enabled ? '' : 'off'}>
-          <td><a href="/schedules/{s.id}">{s.title}</a></td>
-          <td>{s.councillor_slug}</td>
-          <td>{s.kind}</td>
-          <td>
-            {#if s.kind === 'recurring'}
-              <code>{s.cron}</code>
-            {:else}
-              {fmt(s.fire_at)}
-            {/if}
-          </td>
-          <td>{fmt(s.next_fire_at)}</td>
-          <td>{s.fire_count}{#if s.last_fire_job_id} · <a href="/jobs/{s.last_fire_job_id}">last</a>{/if}</td>
-          <td class="row-actions">
-            <form method="POST" action="?/toggle">
-              <input type="hidden" name="id" value={s.id} />
-              <input type="hidden" name="enabled" value={(!s.enabled).toString()} />
-              <button class="link" type="submit">{s.enabled ? 'Disable' : 'Enable'}</button>
-            </form>
-            <form method="POST" action="?/delete" onsubmit={(e) => { if (!confirm(`Delete schedule "${s.title}"?`)) e.preventDefault(); }}>
-              <input type="hidden" name="id" value={s.id} />
-              <button class="link danger" type="submit">Delete</button>
-            </form>
-          </td>
-        </tr>
-      {/each}
-    </tbody>
-  </table>
+  <ul class="feed">
+    {#each items as s (s.id)}
+      <li class:off={!s.enabled}>
+        <Card href="/schedules/{s.id}">
+          <div class="row">
+            <div class="main">
+              <span class="title">{s.title}</span>
+              <span class="who">{s.councillor_slug}</span>
+            </div>
+            <div class="when">
+              {#if s.kind === 'recurring'}
+                <code class="cron">{s.cron}</code>
+              {:else}
+                <span class="once">{fmt(s.fire_at)}</span>
+              {/if}
+            </div>
+            <div class="meta">
+              {#if s.enabled}
+                <Badge tone="accent">enabled</Badge>
+              {:else}
+                <Badge>disabled</Badge>
+              {/if}
+              {#if s.enabled && s.next_fire_at}
+                <span class="next" title={fmt(s.next_fire_at)}>next {relTime(s.next_fire_at)}</span>
+              {/if}
+              {#if s.fire_count > 0}
+                <span class="fires">{s.fire_count} fire{s.fire_count === 1 ? '' : 's'}</span>
+              {/if}
+            </div>
+          </div>
+        </Card>
+      </li>
+    {/each}
+  </ul>
 {/if}
 
 <style>
-  .head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem; }
-  h1 { margin: 0; }
-  .empty { color: var(--muted); }
-  .t { width: 100%; border-collapse: collapse; }
-  .t th, .t td { padding: 0.5rem 0.75rem; border-bottom: 1px solid var(--border); text-align: left; vertical-align: top; font-size: 0.95em; }
-  .t th { color: var(--muted); font-weight: 500; font-size: 0.85em; }
-  .t tr.off td { opacity: 0.55; }
-  .row-actions { display: flex; gap: 0.5rem; }
-  .row-actions form { display: inline; }
-  .btn { display: inline-block; padding: 0.5rem 0.9rem; border-radius: 6px; border: 1px solid var(--border); text-decoration: none; color: var(--fg); background: transparent; cursor: pointer; }
-  .btn.primary { background: var(--accent); color: #0f1115; border-color: var(--accent); font-weight: 600; }
-  .link { background: none; border: none; padding: 0; color: var(--accent); cursor: pointer; font: inherit; text-decoration: underline; }
-  .link.danger { color: var(--danger); }
-  code { background: rgba(255,255,255,0.04); padding: 0.05rem 0.35rem; border-radius: 4px; font-size: 0.9em; }
+  .feed { list-style: none; padding: 0; margin: 0; display: grid; gap: 0.5rem; }
+  .feed li.off { opacity: 0.6; }
+
+  .row {
+    display: grid;
+    grid-template-columns: 1fr auto;
+    gap: 0.4rem 1rem;
+    align-items: center;
+  }
+  .main { min-width: 0; display: flex; align-items: baseline; gap: 0.6rem; flex-wrap: wrap; }
+  .title {
+    font-weight: 500;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .who { color: var(--muted); font-size: 0.88em; }
+  .when { justify-self: end; }
+  .cron {
+    font-family: var(--font-mono);
+    font-size: 0.85em;
+    background: var(--surface-2);
+    padding: 0.1rem 0.4rem;
+    border-radius: var(--radius-sm);
+    color: var(--fg);
+  }
+  .once { color: var(--muted); font-size: 0.88em; font-variant-numeric: tabular-nums; }
+  .meta {
+    grid-column: 1 / -1;
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+    flex-wrap: wrap;
+    font-size: 0.82em;
+    color: var(--faint);
+  }
+  .next { color: var(--muted); font-variant-numeric: tabular-nums; }
+  .fires { font-variant-numeric: tabular-nums; }
+
+  @media (max-width: 560px) {
+    .row { grid-template-columns: 1fr; }
+    .when { justify-self: start; }
+  }
 </style>

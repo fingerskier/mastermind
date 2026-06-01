@@ -6,12 +6,36 @@ import {
   deleteCouncilData
 } from '$lib/server/councils';
 import { deleteCouncillor } from '$lib/server/councillors';
+import { listKnownAdapters } from '$lib/server/adapters';
+import { parseAdapterId } from '$lib/server/adapters/cli';
 import { readCouncilEnv, writeCouncilEnv, type EnvPair } from '$lib/server/env-file';
 import type { Actions, PageServerLoad } from './$types';
 
+/**
+ * Adapter readiness as derivable from static config (no PATH probing here):
+ *  - `none`        councillor has no adapter set; jobs stay queued
+ *  - `ready`       adapter id is known and marked available
+ *  - `unavailable` adapter is known but not usable yet (e.g. SDK adapters)
+ *  - `unknown`     adapter id isn't in the known registry (typo / custom)
+ */
+export type AdapterHealth = 'none' | 'ready' | 'unavailable' | 'unknown';
+
 export const load: PageServerLoad = async () => {
   if (!hasCouncil()) error(404, 'No council in this directory');
-  return { council: await readCouncilWithCouncillors(), pairs: readCouncilEnv() };
+  const council = await readCouncilWithCouncillors();
+  const known = listKnownAdapters();
+  const adapterHealth: Record<string, AdapterHealth> = {};
+  for (const cl of council.councillors) {
+    const id = (cl.adapter ?? '').trim();
+    if (!id) {
+      adapterHealth[cl.slug] = 'none';
+      continue;
+    }
+    const { base } = parseAdapterId(id);
+    const match = known.find((a) => a.id === base);
+    adapterHealth[cl.slug] = !match ? 'unknown' : match.available ? 'ready' : 'unavailable';
+  }
+  return { council, pairs: readCouncilEnv(), adapterHealth };
 };
 
 export const actions: Actions = {

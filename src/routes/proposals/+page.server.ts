@@ -16,19 +16,26 @@ function parseStatusFilter(raw: string | null): StatusFilter {
 export const load: PageServerLoad = async ({ url }) => {
   if (!hasCouncil()) error(404, 'No council in this directory');
   const status = parseStatusFilter(url.searchParams.get('status'));
-  const [proposals, councillors] = await Promise.all([
-    listJobProposals({ status }),
+  const [all, councillors] = await Promise.all([
+    listJobProposals({ status: 'all' }),
     listCouncillors()
   ]);
+  const counts = {
+    pending: all.filter((p) => p.status === 'pending').length,
+    approved: all.filter((p) => p.status === 'approved').length,
+    rejected: all.filter((p) => p.status === 'rejected').length,
+    all: all.length
+  };
+  const filtered = status === 'all' ? all : all.filter((p) => p.status === status);
   const knownSlugs = new Set(councillors.map((c) => c.slug));
-  const decorated = proposals.map((p) => ({
+  const decorated = filtered.map((p) => ({
     ...p,
     target_unknown:
       p.target_councillor !== null &&
       p.target_councillor !== 'all' &&
       !knownSlugs.has(p.target_councillor)
   }));
-  return { proposals: decorated, status, councillors };
+  return { proposals: decorated, status, councillors, counts };
 };
 
 export const actions: Actions = {
